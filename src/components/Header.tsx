@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -8,7 +8,7 @@ import { useCart } from "@/lib/cart-context";
 import { siteConfig } from "@/config/site";
 
 const NAV_LINKS = [
-  { href: "/", label: "InÃ­cio" },
+  { href: "/", label: "Início" },
   { href: "/loja", label: "Loja" },
   { href: "/loja?categoria=Macaquinhos", label: "Macaquinhos" },
   { href: "/loja?categoria=Conjuntos", label: "Conjuntos" },

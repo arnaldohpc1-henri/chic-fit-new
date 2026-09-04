@@ -1,8 +1,8 @@
-﻿"use client";
+"use client";
 
 import Image from "next/image";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Product } from "@/lib/products";
 import { formatPrice } from "@/lib/format";
 
@@ -29,6 +29,18 @@ export function ProductCard({ product }: { product: Product }) {
     }
     setImgIndex(0);
   }
+
+  // Em telas sem mouse (celular/tablet) não existe hover, então a peça
+  // alterna as fotos sozinha para manter a vitrine interativa também lá.
+  useEffect(() => {
+    if (color.images.length <= 1) return;
+    const hasHover = window.matchMedia("(hover: hover)").matches;
+    if (hasHover) return;
+    const id = setInterval(() => {
+      setImgIndex((i) => (i + 1) % color.images.length);
+    }, CYCLE_MS);
+    return () => clearInterval(id);
+  }, [color]);
 
   return (
     <div className="group block overflow-hidden rounded-2xl bg-card">
