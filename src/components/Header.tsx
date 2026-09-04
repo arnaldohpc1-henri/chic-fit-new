@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Image from "next/image";
 import Link from "next/link";
@@ -8,7 +8,7 @@ import { useCart } from "@/lib/cart-context";
 import { siteConfig } from "@/config/site";
 
 const NAV_LINKS = [
-  { href: "/", label: "Início" },
+  { href: "/", label: "InÃ­cio" },
   { href: "/loja", label: "Loja" },
   { href: "/loja?categoria=Macaquinhos", label: "Macaquinhos" },
   { href: "/loja?categoria=Conjuntos", label: "Conjuntos" },
@@ -108,7 +108,7 @@ export function Header() {
 
         <Link href="/" className="justify-self-center">
           <Image
-            src="/logo.png"
+            src="/logo-cf.png"
             alt={siteConfig.name}
             width={96}
             height={96}
