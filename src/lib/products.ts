@@ -39,7 +39,6 @@ export const products: Product[] = [
         images: [
           "/products/macaquinho-canelado-chumbo-1.jpg",
           "/products/macaquinho-canelado-chumbo-2.jpg",
-          "/products/macaquinho-canelado-chumbo-3.jpg",
         ],
       },
     ],
@@ -78,7 +77,10 @@ export const products: Product[] = [
     colors: [
       {
         name: "Amarelo",
-        images: ["/products/macaquinho-canelado-amarelo-1.jpg"],
+        images: [
+          "/products/macaquinho-canelado-amarelo-1.jpg",
+          "/products/macaquinho-canelado-amarelo-2.jpg",
+        ],
       },
     ],
     isDraft: true,

@@ -14,6 +14,7 @@ export function ProductView({ product }: { product: Product }) {
   return (
     <div className="grid gap-10 lg:grid-cols-2">
       <ProductGallery
+        key={color.name}
         images={color.images}
         alt={`${product.name} — ${color.name}`}
       />
