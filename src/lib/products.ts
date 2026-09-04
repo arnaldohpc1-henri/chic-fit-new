@@ -1,25 +1,28 @@
+export type ColorVariant = {
+  name: string;
+  images: string[];
+};
+
 export type Product = {
   id: string;
   slug: string;
   name: string;
   category: string;
-  color: string;
   price: number | null;
   sizes: string[];
   description: string;
   details: string[];
-  images: string[];
+  colors: ColorVariant[];
   /** true = peça já exposta na vitrine mas aguardando preço/descrição final */
   isDraft?: boolean;
 };
 
 export const products: Product[] = [
   {
-    id: "macaquinho-canelado-chumbo",
-    slug: "macaquinho-canelado-chumbo",
+    id: "macaquinho-canelado",
+    slug: "macaquinho-canelado",
     name: "Macaquinho Canelado",
     category: "Macaquinhos",
-    color: "Chumbo",
     price: 130,
     sizes: ["Único (veste do 36 ao 42)"],
     description:
@@ -30,10 +33,15 @@ export const products: Product[] = [
       "Caimento que valoriza o corpo",
       "Tamanho único — veste do 36 ao 42",
     ],
-    images: [
-      "/products/macaquinho-canelado-chumbo-1.jpg",
-      "/products/macaquinho-canelado-chumbo-2.jpg",
-      "/products/macaquinho-canelado-chumbo-3.jpg",
+    colors: [
+      {
+        name: "Chumbo",
+        images: [
+          "/products/macaquinho-canelado-chumbo-1.jpg",
+          "/products/macaquinho-canelado-chumbo-2.jpg",
+          "/products/macaquinho-canelado-chumbo-3.jpg",
+        ],
+      },
     ],
   },
   {
@@ -41,15 +49,19 @@ export const products: Product[] = [
     slug: "macaquinho-canelado-pink",
     name: "Macaquinho Canelado",
     category: "Macaquinhos",
-    color: "Pink",
     price: null,
     sizes: [],
     description:
       "Detalhes completos (preço, tamanhos e descrição) chegando em breve. Fale com a gente pelo WhatsApp para mais informações sobre esta peça.",
     details: [],
-    images: [
-      "/products/macaquinho-canelado-pink-1.jpg",
-      "/products/macaquinho-canelado-pink-2.jpg",
+    colors: [
+      {
+        name: "Pink",
+        images: [
+          "/products/macaquinho-canelado-pink-1.jpg",
+          "/products/macaquinho-canelado-pink-2.jpg",
+        ],
+      },
     ],
     isDraft: true,
   },
@@ -58,13 +70,17 @@ export const products: Product[] = [
     slug: "macaquinho-canelado-amarelo",
     name: "Macaquinho Canelado",
     category: "Macaquinhos",
-    color: "Amarelo",
     price: null,
     sizes: [],
     description:
       "Detalhes completos (preço, tamanhos e descrição) chegando em breve. Fale com a gente pelo WhatsApp para mais informações sobre esta peça.",
     details: [],
-    images: ["/products/macaquinho-canelado-amarelo-1.jpg"],
+    colors: [
+      {
+        name: "Amarelo",
+        images: ["/products/macaquinho-canelado-amarelo-1.jpg"],
+      },
+    ],
     isDraft: true,
   },
   {
@@ -72,13 +88,17 @@ export const products: Product[] = [
     slug: "conjunto-fitness-preto",
     name: "Conjunto Fitness Cropped + Legging",
     category: "Conjuntos",
-    color: "Preto",
     price: null,
     sizes: [],
     description:
       "Detalhes completos (preço, tamanhos e descrição) chegando em breve. Fale com a gente pelo WhatsApp para mais informações sobre esta peça.",
     details: [],
-    images: ["/products/conjunto-fitness-preto-1.jpg"],
+    colors: [
+      {
+        name: "Preto",
+        images: ["/products/conjunto-fitness-preto-1.jpg"],
+      },
+    ],
     isDraft: true,
   },
   {
@@ -86,15 +106,19 @@ export const products: Product[] = [
     slug: "conjunto-fitness-vermelho",
     name: "Conjunto Fitness Top + Legging",
     category: "Conjuntos",
-    color: "Vermelho",
     price: null,
     sizes: [],
     description:
       "Detalhes completos (preço, tamanhos e descrição) chegando em breve. Fale com a gente pelo WhatsApp para mais informações sobre esta peça.",
     details: [],
-    images: [
-      "/products/conjunto-fitness-vermelho-1.jpg",
-      "/products/conjunto-fitness-vermelho-2.jpg",
+    colors: [
+      {
+        name: "Vermelho",
+        images: [
+          "/products/conjunto-fitness-vermelho-1.jpg",
+          "/products/conjunto-fitness-vermelho-2.jpg",
+        ],
+      },
     ],
     isDraft: true,
   },

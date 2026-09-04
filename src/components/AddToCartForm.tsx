@@ -6,7 +6,15 @@ import { Product } from "@/lib/products";
 import { useCart } from "@/lib/cart-context";
 import { siteConfig } from "@/config/site";
 
-export function AddToCartForm({ product }: { product: Product }) {
+export function AddToCartForm({
+  product,
+  color,
+  image,
+}: {
+  product: Product;
+  color: string;
+  image: string;
+}) {
   const { addItem } = useCart();
   const router = useRouter();
   const [size, setSize] = useState(product.sizes[0] ?? "");
@@ -22,7 +30,7 @@ export function AddToCartForm({ product }: { product: Product }) {
         </p>
         <a
           href={`https://wa.me/${siteConfig.whatsappNumber}?text=${encodeURIComponent(
-            `Olá! Tenho interesse na peça "${product.name} - ${product.color}" que vi no site.`
+            `Olá! Tenho interesse na peça "${product.name} - ${color}" que vi no site.`
           )}`}
           target="_blank"
           rel="noreferrer"
@@ -40,10 +48,10 @@ export function AddToCartForm({ product }: { product: Product }) {
         productId: product.id,
         slug: product.slug,
         name: product.name,
-        color: product.color,
+        color,
         size,
         price: product.price as number,
-        image: product.images[0],
+        image,
       },
       qty
     );

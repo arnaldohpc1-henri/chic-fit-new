@@ -1,9 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getProductBySlug, products } from "@/lib/products";
-import { formatPrice } from "@/lib/format";
-import { ProductGallery } from "@/components/ProductGallery";
-import { AddToCartForm } from "@/components/AddToCartForm";
+import { ProductView } from "@/components/ProductView";
 import { ProductCard } from "@/components/ProductCard";
 
 export function generateStaticParams() {
@@ -32,44 +30,7 @@ export default async function ProdutoPage({
         / <span>{product.category}</span>
       </nav>
 
-      <div className="grid gap-10 lg:grid-cols-2">
-        <ProductGallery
-          images={product.images}
-          alt={`${product.name} — ${product.color}`}
-        />
-
-        <div>
-          <p className="text-xs uppercase tracking-wide text-muted">
-            {product.category}
-          </p>
-          <h1 className="mt-1 font-display text-3xl sm:text-4xl">
-            {product.name}
-          </h1>
-          <p className="mt-1 text-muted">Cor: {product.color}</p>
-          <p className="mt-4 text-2xl font-medium">
-            {formatPrice(product.price)}
-          </p>
-
-          <p className="mt-6 leading-relaxed text-foreground/85">
-            {product.description}
-          </p>
-
-          {product.details.length > 0 && (
-            <ul className="mt-4 space-y-1 text-sm text-muted">
-              {product.details.map((d) => (
-                <li key={d} className="flex gap-2">
-                  <span className="text-accent">•</span>
-                  {d}
-                </li>
-              ))}
-            </ul>
-          )}
-
-          <div className="mt-8">
-            <AddToCartForm product={product} />
-          </div>
-        </div>
-      </div>
+      <ProductView product={product} />
 
       {related.length > 0 && (
         <section className="mt-20">

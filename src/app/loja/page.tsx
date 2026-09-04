@@ -9,13 +9,24 @@ export const metadata = {
 export default async function LojaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ categoria?: string }>;
+  searchParams: Promise<{ categoria?: string; busca?: string }>;
 }) {
-  const { categoria } = await searchParams;
+  const { categoria, busca } = await searchParams;
   const categories = getCategories();
-  const filtered = categoria
+
+  let filtered = categoria
     ? products.filter((p) => p.category === categoria)
     : products;
+
+  if (busca) {
+    const term = busca.trim().toLowerCase();
+    filtered = filtered.filter(
+      (p) =>
+        p.name.toLowerCase().includes(term) ||
+        p.category.toLowerCase().includes(term) ||
+        p.colors.some((c) => c.name.toLowerCase().includes(term))
+    );
+  }
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12">
@@ -24,6 +35,11 @@ export default async function LojaPage({
           Todas as peças
         </p>
         <h1 className="mt-2 font-display text-4xl">Loja</h1>
+        {busca && (
+          <p className="mt-2 text-sm text-muted">
+            Resultados para &quot;{busca}&quot;
+          </p>
+        )}
       </div>
 
       <div className="mb-8 flex flex-wrap gap-2">
@@ -53,7 +69,7 @@ export default async function LojaPage({
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-muted">Nenhuma peça encontrada nesta categoria.</p>
+        <p className="text-muted">Nenhuma peça encontrada.</p>
       ) : (
         <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
           {filtered.map((product) => (
