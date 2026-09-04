@@ -5,7 +5,7 @@ import { products } from "@/lib/products";
 import { siteConfig } from "@/config/site";
 
 export default function Home() {
-  const featured = products.slice(0, 4);
+  const featured = products;
 
   return (
     <div>
