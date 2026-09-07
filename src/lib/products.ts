@@ -117,24 +117,20 @@ const SEED_PRODUCTS: Product[] = [
 ];
 
 /**
- * Lê o catálogo salvo no Blob. IMPORTANTE: só trata como "ainda não existe"
- * quando o Blob confirma que o arquivo realmente não existe (result === null).
- * Qualquer outro problema (rede, limite de taxa, resposta inesperada) é
- * relançado como erro — nunca deve virar silenciosamente um "usa os dados
- * iniciais", porque se isso alimentar uma gravação (mutateProducts), o
- * catálogo real salvo pelo painel seria substituído pelos dados de exemplo.
+ * Lê o catálogo salvo no Blob para uma GRAVAÇÃO. Nunca cai para os dados de
+ * exemplo aqui — nem quando get() devolve null. Já vimos get() retornar
+ * null mesmo com o arquivo existindo (instabilidade pontual do Blob), e se
+ * isso alimentasse uma gravação, o catálogo real seria substituído pelos
+ * dados de exemplo. Se não der pra confirmar o conteúdo real, a operação
+ * falha visivelmente em vez de arriscar apagar dados de verdade.
  */
-async function readCatalogStrict(): Promise<{ products: Product[]; etag?: string }> {
-  // useCache: false lê direto da origem (ignora qualquer CDN). Isso é
-  // essencial aqui: a URL pública do Blob pode continuar servindo uma
-  // versão em cache por alguns segundos após uma gravação, mesmo com
-  // parâmetros de cache-busting na query string — o que fazia o painel
-  // ler uma lista desatualizada e, ao salvar em cima dela, "ressuscitar"
-  // peças que já tinham sido excluídas por outra requisição.
+async function readCatalogForMutation(): Promise<{ products: Product[]; etag?: string }> {
+  // useCache: false lê direto da origem (ignora qualquer CDN).
   const result = await get(CATALOG_PATH, { access: "public", useCache: false });
   if (!result) {
-    // Confirmado: o arquivo nunca foi salvo. Só aqui é seguro usar o catálogo inicial.
-    return { products: SEED_PRODUCTS, etag: undefined };
+    throw new Error(
+      "Não foi possível confirmar o catálogo atual no Blob (resposta vazia)."
+    );
   }
   if (result.statusCode !== 200) {
     throw new Error("Resposta inesperada do Blob ao ler o catálogo.");
@@ -146,12 +142,16 @@ async function readCatalogStrict(): Promise<{ products: Product[]; etag?: string
 
 export async function getProducts(): Promise<Product[]> {
   try {
-    const { products } = await readCatalogStrict();
-    return products;
+    const result = await get(CATALOG_PATH, { access: "public", useCache: false });
+    if (!result || result.statusCode !== 200) {
+      // Pode ser "realmente nunca salvo" ou uma falha pontual de leitura —
+      // para uma página pública, mostrar o catálogo inicial é melhor do
+      // que quebrar a página. Isso não grava nada, então é seguro.
+      return SEED_PRODUCTS;
+    }
+    const text = await new Response(result.stream).text();
+    return JSON.parse(text) as Product[];
   } catch {
-    // Falha ao ler (rede, etc.) numa página pública: melhor mostrar o
-    // catálogo inicial do que quebrar a página. Isso NÃO afeta o que está
-    // salvo no Blob — só uma leitura de exibição, sem gravar nada.
     return SEED_PRODUCTS;
   }
 }
@@ -192,7 +192,20 @@ export async function mutateProducts(
   const MAX_ATTEMPTS = 10;
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const { products: current, etag } = await readCatalogStrict();
+    let current: Product[];
+    let etag: string | undefined;
+
+    try {
+      ({ products: current, etag } = await readCatalogForMutation());
+    } catch (err) {
+      // Leitura falhou (já vimos isso acontecer pontualmente com o Blob) —
+      // tenta de novo em vez de desistir na primeira falha.
+      if (attempt === MAX_ATTEMPTS) throw err;
+      const backoff = 80 * attempt + Math.random() * 150;
+      await new Promise((resolve) => setTimeout(resolve, backoff));
+      continue;
+    }
+
     const next = mutate(current);
     const serialized = JSON.stringify(next, null, 2);
 
