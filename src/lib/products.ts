@@ -1,4 +1,4 @@
-import { put, head, BlobPreconditionFailedError } from "@vercel/blob";
+import { put, get, BlobPreconditionFailedError } from "@vercel/blob";
 import type { Product } from "./product-types";
 
 export type { Product, ColorVariant } from "./product-types";
@@ -125,27 +125,23 @@ const SEED_PRODUCTS: Product[] = [
  * catálogo real salvo pelo painel seria substituído pelos dados de exemplo.
  */
 async function readCatalogStrict(): Promise<{ products: Product[]; etag?: string }> {
-  let info;
-  try {
-    info = await head(CATALOG_PATH);
-  } catch (err) {
-    const message = err instanceof Error ? err.message.toLowerCase() : "";
-    const notFound = message.includes("not_found") || message.includes("not found");
-    if (notFound) {
-      // Confirmado: o arquivo nunca foi salvo. Só aqui é seguro usar o catálogo inicial.
-      return { products: SEED_PRODUCTS, etag: undefined };
-    }
-    // Qualquer outro erro (rede, permissão, etc.) não deve virar um "usa os
-    // dados de exemplo" — relança para quem chamou decidir o que fazer.
-    throw err;
+  // useCache: false lê direto da origem (ignora qualquer CDN). Isso é
+  // essencial aqui: a URL pública do Blob pode continuar servindo uma
+  // versão em cache por alguns segundos após uma gravação, mesmo com
+  // parâmetros de cache-busting na query string — o que fazia o painel
+  // ler uma lista desatualizada e, ao salvar em cima dela, "ressuscitar"
+  // peças que já tinham sido excluídas por outra requisição.
+  const result = await get(CATALOG_PATH, { access: "public", useCache: false });
+  if (!result) {
+    // Confirmado: o arquivo nunca foi salvo. Só aqui é seguro usar o catálogo inicial.
+    return { products: SEED_PRODUCTS, etag: undefined };
   }
-
-  // cache-busting: evita que o CDN entregue uma versão em cache logo após
-  // uma gravação recente (edições em sequência rápida no painel admin)
-  const res = await fetch(`${info.url}?t=${Date.now()}`, { cache: "no-store" });
-  if (!res.ok) throw new Error(`Falha ao buscar catálogo salvo (status ${res.status}).`);
-  const products = (await res.json()) as Product[];
-  return { products, etag: info.etag };
+  if (result.statusCode !== 200) {
+    throw new Error("Resposta inesperada do Blob ao ler o catálogo.");
+  }
+  const text = await new Response(result.stream).text();
+  const products = JSON.parse(text) as Product[];
+  return { products, etag: result.blob.etag };
 }
 
 export async function getProducts(): Promise<Product[]> {
