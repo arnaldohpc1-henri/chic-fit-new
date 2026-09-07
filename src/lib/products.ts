@@ -157,6 +157,29 @@ export async function getProducts(): Promise<Product[]> {
 }
 
 /**
+ * Espera até a leitura direto da origem devolver exatamente o conteúdo
+ * recém-gravado (ou desiste após algumas tentativas). Usado logo após um
+ * put() bem-sucedido para reduzir a chance de uma ação seguinte no painel
+ * ler uma cópia desatualizada e reverter esta gravação sem querer.
+ */
+async function waitUntilReadable(expected: string): Promise<void> {
+  for (let i = 0; i < 6; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 250 * (i + 1)));
+    try {
+      const result = await get(CATALOG_PATH, { access: "public", useCache: false });
+      if (result && result.statusCode === 200) {
+        const text = await new Response(result.stream).text();
+        if (text === expected) return;
+      }
+    } catch {
+      // ignora e tenta de novo
+    }
+  }
+  // Não deu para confirmar dentro do tempo — segue mesmo assim. A gravação
+  // em si foi bem-sucedida; isso só reduz (não garante) a janela de risco.
+}
+
+/**
  * Aplica uma alteração no catálogo de forma segura contra escritas
  * concorrentes (ex: excluir duas peças em sequência rápida no painel).
  * Usa o ETag do arquivo salvo no Blob como trava otimista: se outra
@@ -171,6 +194,7 @@ export async function mutateProducts(
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const { products: current, etag } = await readCatalogStrict();
     const next = mutate(current);
+    const serialized = JSON.stringify(next, null, 2);
 
     // O Blob devolve ETags "fracos" (prefixo W/), que o próprio ifMatch do
     // Blob nunca reconhece como iguais em comparação estrita — sem remover
@@ -179,13 +203,18 @@ export async function mutateProducts(
     const strongEtag = etag?.replace(/^W\//, "");
 
     try {
-      await put(CATALOG_PATH, JSON.stringify(next, null, 2), {
+      await put(CATALOG_PATH, serialized, {
         access: "public",
         contentType: "application/json",
         addRandomSuffix: false,
         allowOverwrite: true,
         ...(strongEtag ? { ifMatch: strongEtag } : {}),
       });
+      // Confirma que a gravação já está visível antes de responder "ok":
+      // o armazenamento pode levar um instante para propagar, e sem essa
+      // confirmação uma segunda ação logo em seguida (outro clique no
+      // painel) podia ler uma versão desatualizada e desfazer esta.
+      await waitUntilReadable(serialized);
       return next;
     } catch (err) {
       // Checagem por mensagem em vez de `instanceof`: em produção o
@@ -197,9 +226,7 @@ export async function mutateProducts(
         err instanceof BlobPreconditionFailedError ||
         message.includes("Precondition failed") ||
         message.includes("ETag mismatch");
-      if (!isConflict || attempt === MAX_ATTEMPTS) {
-        throw new Error(`${message} [etag usado: ${JSON.stringify(etag)}]`);
-      }
+      if (!isConflict || attempt === MAX_ATTEMPTS) throw err;
       // outra gravação venceu a corrida — espera um pouco (com variação
       // aleatória, pra não colidir de novo com quem também está
       // tentando de novo agora) e lê os dados mais recentes na próxima volta
