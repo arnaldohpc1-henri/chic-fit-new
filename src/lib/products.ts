@@ -165,7 +165,15 @@ export async function mutateProducts(
       });
       return next;
     } catch (err) {
-      const isConflict = err instanceof BlobPreconditionFailedError;
+      // Checagem por mensagem em vez de `instanceof`: em produção o
+      // bundler pode duplicar a classe de erro em chunks diferentes,
+      // fazendo `instanceof BlobPreconditionFailedError` falhar mesmo
+      // sendo o mesmo tipo de erro.
+      const message = err instanceof Error ? err.message : "";
+      const isConflict =
+        err instanceof BlobPreconditionFailedError ||
+        message.includes("Precondition failed") ||
+        message.includes("ETag mismatch");
       if (!isConflict || attempt === MAX_ATTEMPTS) throw err;
       // outra gravação venceu a corrida — lê de novo e tenta mais uma vez
     }

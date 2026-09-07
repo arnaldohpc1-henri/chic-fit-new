@@ -66,12 +66,6 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json(created, { status: 201 });
   } catch (err) {
-    return NextResponse.json(
-      {
-        error: blobErrorMessage(err),
-        debug: err instanceof Error ? `${err.constructor.name}: ${err.message}` : String(err),
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: blobErrorMessage(err) }, { status: 500 });
   }
 }
