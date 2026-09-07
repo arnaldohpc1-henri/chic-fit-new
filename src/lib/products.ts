@@ -116,27 +116,40 @@ const SEED_PRODUCTS: Product[] = [
   },
 ];
 
-async function readCatalog(): Promise<{ products: Product[]; etag?: string }> {
-  try {
-    // useCache: false lê direto da origem, ignorando o CDN — importante
-    // porque logo depois de uma gravação (edições em sequência no painel)
-    // uma leitura via CDN pode devolver uma cópia antiga por alguns segundos.
-    const result = await get(CATALOG_PATH, { access: "public", useCache: false });
-    if (!result || result.statusCode !== 200) {
-      throw new Error("Catálogo não encontrado.");
-    }
-    const text = await new Response(result.stream).text();
-    return { products: JSON.parse(text) as Product[], etag: result.blob.etag };
-  } catch {
-    // Ainda não existe catálogo salvo no Blob — usa os dados iniciais.
-    // Assim que o painel salvar qualquer alteração, o Blob passa a ser a fonte.
+/**
+ * Lê o catálogo salvo no Blob. IMPORTANTE: só trata como "ainda não existe"
+ * quando o Blob confirma que o arquivo realmente não existe (result === null).
+ * Qualquer outro problema (rede, limite de taxa, resposta inesperada) é
+ * relançado como erro — nunca deve virar silenciosamente um "usa os dados
+ * iniciais", porque se isso alimentar uma gravação (mutateProducts), o
+ * catálogo real salvo pelo painel seria substituído pelos dados de exemplo.
+ */
+async function readCatalogStrict(): Promise<{ products: Product[]; etag?: string }> {
+  // useCache: false lê direto da origem, ignorando o CDN — importante
+  // porque logo depois de uma gravação (edições em sequência no painel)
+  // uma leitura via CDN pode devolver uma cópia antiga por alguns segundos.
+  const result = await get(CATALOG_PATH, { access: "public", useCache: false });
+  if (!result) {
+    // Confirmado: o arquivo nunca foi salvo. Só aqui é seguro usar o catálogo inicial.
     return { products: SEED_PRODUCTS, etag: undefined };
   }
+  if (result.statusCode !== 200) {
+    throw new Error("Resposta inesperada do Blob ao ler o catálogo.");
+  }
+  const text = await new Response(result.stream).text();
+  return { products: JSON.parse(text) as Product[], etag: result.blob.etag };
 }
 
 export async function getProducts(): Promise<Product[]> {
-  const { products } = await readCatalog();
-  return products;
+  try {
+    const { products } = await readCatalogStrict();
+    return products;
+  } catch {
+    // Falha ao ler (rede, etc.) numa página pública: melhor mostrar o
+    // catálogo inicial do que quebrar a página. Isso NÃO afeta o que está
+    // salvo no Blob — só uma leitura de exibição, sem gravar nada.
+    return SEED_PRODUCTS;
+  }
 }
 
 /**
@@ -152,7 +165,7 @@ export async function mutateProducts(
   const MAX_ATTEMPTS = 10;
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const { products: current, etag } = await readCatalog();
+    const { products: current, etag } = await readCatalogStrict();
     const next = mutate(current);
 
     try {
