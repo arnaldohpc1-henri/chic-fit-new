@@ -149,7 +149,7 @@ export async function getProducts(): Promise<Product[]> {
 export async function mutateProducts(
   mutate: (current: Product[]) => Product[]
 ): Promise<Product[]> {
-  const MAX_ATTEMPTS = 6;
+  const MAX_ATTEMPTS = 10;
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     const { products: current, etag } = await readCatalog();
@@ -175,7 +175,11 @@ export async function mutateProducts(
         message.includes("Precondition failed") ||
         message.includes("ETag mismatch");
       if (!isConflict || attempt === MAX_ATTEMPTS) throw err;
-      // outra gravação venceu a corrida — lê de novo e tenta mais uma vez
+      // outra gravação venceu a corrida — espera um pouco (com variação
+      // aleatória, pra não colidir de novo com quem também está
+      // tentando de novo agora) e lê os dados mais recentes na próxima volta
+      const backoff = 80 * attempt + Math.random() * 150;
+      await new Promise((resolve) => setTimeout(resolve, backoff));
     }
   }
 
