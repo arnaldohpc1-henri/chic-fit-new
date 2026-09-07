@@ -1,4 +1,4 @@
-import { put, head, BlobPreconditionFailedError } from "@vercel/blob";
+import { put, get, BlobPreconditionFailedError } from "@vercel/blob";
 import type { Product } from "./product-types";
 
 export type { Product, ColorVariant } from "./product-types";
@@ -118,12 +118,15 @@ const SEED_PRODUCTS: Product[] = [
 
 async function readCatalog(): Promise<{ products: Product[]; etag?: string }> {
   try {
-    const info = await head(CATALOG_PATH);
-    // cache-busting: evita que o CDN entregue uma versão em cache logo após
-    // uma gravação recente (edições em sequência rápida no painel admin)
-    const res = await fetch(`${info.url}?t=${Date.now()}`, { cache: "no-store" });
-    if (!res.ok) throw new Error("Falha ao buscar catálogo salvo.");
-    return { products: (await res.json()) as Product[], etag: info.etag };
+    // useCache: false lê direto da origem, ignorando o CDN — importante
+    // porque logo depois de uma gravação (edições em sequência no painel)
+    // uma leitura via CDN pode devolver uma cópia antiga por alguns segundos.
+    const result = await get(CATALOG_PATH, { access: "public", useCache: false });
+    if (!result || result.statusCode !== 200) {
+      throw new Error("Catálogo não encontrado.");
+    }
+    const text = await new Response(result.stream).text();
+    return { products: JSON.parse(text) as Product[], etag: result.blob.etag };
   } catch {
     // Ainda não existe catálogo salvo no Blob — usa os dados iniciais.
     // Assim que o painel salvar qualquer alteração, o Blob passa a ser a fonte.
