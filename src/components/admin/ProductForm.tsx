@@ -138,6 +138,10 @@ export function ProductForm(props: Props) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? "Não foi possível salvar.");
       }
+      // pequena espera: dá tempo do Blob propagar a gravação antes do
+      // painel recarregar a lista, evitando que a peça salva "suma" por
+      // um instante
+      await new Promise((r) => setTimeout(r, 700));
       router.push("/admin");
       router.refresh();
     } catch (err) {
@@ -155,6 +159,7 @@ export function ProductForm(props: Props) {
     try {
       const res = await fetch(`/api/admin/products/${props.productId}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Não foi possível excluir.");
+      await new Promise((r) => setTimeout(r, 700));
       router.push("/admin");
       router.refresh();
     } catch (err) {

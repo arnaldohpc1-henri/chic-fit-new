@@ -23,8 +23,15 @@ export default function AdminDashboardPage() {
 
   async function handleDelete(id: string) {
     if (!confirm("Excluir esta peça? Essa ação não pode ser desfeita.")) return;
-    await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
-    load();
+    const res = await fetch(`/api/admin/products/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      // Remove localmente em vez de recarregar da API: o Blob pode levar um
+      // instante para propagar a gravação, e recarregar cedo demais faria a
+      // peça excluída "reaparecer" na lista por alguns segundos.
+      setProducts((prev) => (prev ? prev.filter((p) => p.id !== id) : prev));
+    } else {
+      setError("Não foi possível excluir. Tente novamente.");
+    }
   }
 
   return (
