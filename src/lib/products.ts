@@ -1,4 +1,4 @@
-import { put, get, BlobPreconditionFailedError } from "@vercel/blob";
+import { put, head, BlobPreconditionFailedError } from "@vercel/blob";
 import type { Product } from "./product-types";
 
 export type { Product, ColorVariant } from "./product-types";
@@ -116,42 +116,39 @@ const SEED_PRODUCTS: Product[] = [
   },
 ];
 
+// head() (metadados/ETag) provou ser confiável nos testes. get() com
+// useCache:false, que deveria ler direto da origem, se mostrou instável
+// (403 esporádico, ou null mesmo com o arquivo existindo) quando chamada
+// de dentro da função serverless — por isso a leitura de conteúdo usa
+// fetch() na URL pública (com cache-busting) em vez de get().
+async function fetchCatalogBody(url: string): Promise<Product[]> {
+  const res = await fetch(`${url}?t=${Date.now()}-${Math.random()}`, {
+    cache: "no-store",
+  });
+  if (!res.ok) throw new Error(`Falha ao buscar catálogo salvo (status ${res.status}).`);
+  return (await res.json()) as Product[];
+}
+
 /**
  * Lê o catálogo salvo no Blob para uma GRAVAÇÃO. Nunca cai para os dados de
- * exemplo aqui — nem quando get() devolve null. Já vimos get() retornar
- * null mesmo com o arquivo existindo (instabilidade pontual do Blob), e se
- * isso alimentasse uma gravação, o catálogo real seria substituído pelos
- * dados de exemplo. Se não der pra confirmar o conteúdo real, a operação
- * falha visivelmente em vez de arriscar apagar dados de verdade.
+ * exemplo aqui: se não der pra confirmar o conteúdo real (blob realmente
+ * inexistente é a única exceção), a operação falha visivelmente em vez de
+ * arriscar apagar dados de verdade.
  */
 async function readCatalogForMutation(): Promise<{ products: Product[]; etag?: string }> {
-  // useCache: false lê direto da origem (ignora qualquer CDN).
-  const result = await get(CATALOG_PATH, { access: "public", useCache: false });
-  if (!result) {
-    throw new Error(
-      "Não foi possível confirmar o catálogo atual no Blob (resposta vazia)."
-    );
-  }
-  if (result.statusCode !== 200) {
-    throw new Error("Resposta inesperada do Blob ao ler o catálogo.");
-  }
-  const text = await new Response(result.stream).text();
-  const products = JSON.parse(text) as Product[];
-  return { products, etag: result.blob.etag };
+  const info = await head(CATALOG_PATH);
+  const products = await fetchCatalogBody(info.url);
+  return { products, etag: info.etag };
 }
 
 export async function getProducts(): Promise<Product[]> {
   try {
-    const result = await get(CATALOG_PATH, { access: "public", useCache: false });
-    if (!result || result.statusCode !== 200) {
-      // Pode ser "realmente nunca salvo" ou uma falha pontual de leitura —
-      // para uma página pública, mostrar o catálogo inicial é melhor do
-      // que quebrar a página. Isso não grava nada, então é seguro.
-      return SEED_PRODUCTS;
-    }
-    const text = await new Response(result.stream).text();
-    return JSON.parse(text) as Product[];
+    const info = await head(CATALOG_PATH);
+    return await fetchCatalogBody(info.url);
   } catch {
+    // Pode ser "realmente nunca salvo" ou uma falha pontual de leitura —
+    // para uma página pública, mostrar o catálogo inicial é melhor do que
+    // quebrar a página. Isso não grava nada, então é seguro.
     return SEED_PRODUCTS;
   }
 }
@@ -163,14 +160,14 @@ export async function getProducts(): Promise<Product[]> {
  * ler uma cópia desatualizada e reverter esta gravação sem querer.
  */
 async function waitUntilReadable(expected: string): Promise<void> {
-  for (let i = 0; i < 6; i++) {
-    await new Promise((resolve) => setTimeout(resolve, 250 * (i + 1)));
+  for (let i = 0; i < 8; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 300 * (i + 1)));
     try {
-      const result = await get(CATALOG_PATH, { access: "public", useCache: false });
-      if (result && result.statusCode === 200) {
-        const text = await new Response(result.stream).text();
-        if (text === expected) return;
-      }
+      const info = await head(CATALOG_PATH);
+      const res = await fetch(`${info.url}?t=${Date.now()}-${Math.random()}`, {
+        cache: "no-store",
+      });
+      if (res.ok && (await res.text()) === expected) return;
     } catch {
       // ignora e tenta de novo
     }
