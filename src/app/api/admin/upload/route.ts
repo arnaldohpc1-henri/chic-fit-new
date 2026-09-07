@@ -41,9 +41,6 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json({ url: blob.url });
   } catch (err) {
-    return NextResponse.json(
-      { error: blobErrorMessage(err), debug: err instanceof Error ? err.message : String(err) },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: blobErrorMessage(err) }, { status: 500 });
   }
 }

@@ -119,7 +119,9 @@ const SEED_PRODUCTS: Product[] = [
 export async function getProducts(): Promise<Product[]> {
   try {
     const info = await head(CATALOG_PATH);
-    const res = await fetch(info.url, { cache: "no-store" });
+    // cache-busting: evita que o CDN entregue uma versão em cache logo após
+    // uma gravação recente (edições em sequência rápida no painel admin)
+    const res = await fetch(`${info.url}?t=${Date.now()}`, { cache: "no-store" });
     if (!res.ok) throw new Error("Falha ao buscar catálogo salvo.");
     return (await res.json()) as Product[];
   } catch {
