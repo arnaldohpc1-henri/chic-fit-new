@@ -3,6 +3,8 @@ import { getProducts, saveProducts } from "@/lib/products";
 import type { Product } from "@/lib/product-types";
 import { blobErrorMessage } from "@/lib/blob-error";
 
+export const dynamic = "force-dynamic";
+
 function slugify(text: string): string {
   const base = text
     .toLowerCase()
