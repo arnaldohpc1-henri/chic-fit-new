@@ -1,4 +1,4 @@
-import { put, head } from "@vercel/blob";
+import { put, head, BlobPreconditionFailedError } from "@vercel/blob";
 import type { Product } from "./product-types";
 
 export type { Product, ColorVariant } from "./product-types";
@@ -116,28 +116,59 @@ const SEED_PRODUCTS: Product[] = [
   },
 ];
 
-export async function getProducts(): Promise<Product[]> {
+async function readCatalog(): Promise<{ products: Product[]; etag?: string }> {
   try {
     const info = await head(CATALOG_PATH);
     // cache-busting: evita que o CDN entregue uma versão em cache logo após
     // uma gravação recente (edições em sequência rápida no painel admin)
     const res = await fetch(`${info.url}?t=${Date.now()}`, { cache: "no-store" });
     if (!res.ok) throw new Error("Falha ao buscar catálogo salvo.");
-    return (await res.json()) as Product[];
+    return { products: (await res.json()) as Product[], etag: info.etag };
   } catch {
     // Ainda não existe catálogo salvo no Blob — usa os dados iniciais.
     // Assim que o painel salvar qualquer alteração, o Blob passa a ser a fonte.
-    return SEED_PRODUCTS;
+    return { products: SEED_PRODUCTS, etag: undefined };
   }
 }
 
-export async function saveProducts(products: Product[]): Promise<void> {
-  await put(CATALOG_PATH, JSON.stringify(products, null, 2), {
-    access: "public",
-    contentType: "application/json",
-    addRandomSuffix: false,
-    allowOverwrite: true,
-  });
+export async function getProducts(): Promise<Product[]> {
+  const { products } = await readCatalog();
+  return products;
+}
+
+/**
+ * Aplica uma alteração no catálogo de forma segura contra escritas
+ * concorrentes (ex: excluir duas peças em sequência rápida no painel).
+ * Usa o ETag do arquivo salvo no Blob como trava otimista: se outra
+ * gravação aconteceu entre a leitura e a escrita, tenta de novo com os
+ * dados mais recentes em vez de sobrescrever e perder essa outra alteração.
+ */
+export async function mutateProducts(
+  mutate: (current: Product[]) => Product[]
+): Promise<Product[]> {
+  const MAX_ATTEMPTS = 6;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    const { products: current, etag } = await readCatalog();
+    const next = mutate(current);
+
+    try {
+      await put(CATALOG_PATH, JSON.stringify(next, null, 2), {
+        access: "public",
+        contentType: "application/json",
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        ...(etag ? { ifMatch: etag } : {}),
+      });
+      return next;
+    } catch (err) {
+      const isConflict = err instanceof BlobPreconditionFailedError;
+      if (!isConflict || attempt === MAX_ATTEMPTS) throw err;
+      // outra gravação venceu a corrida — lê de novo e tenta mais uma vez
+    }
+  }
+
+  throw new Error("Não foi possível salvar após várias tentativas.");
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | undefined> {

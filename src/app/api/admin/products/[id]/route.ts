@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProducts, saveProducts } from "@/lib/products";
+import { getProducts, mutateProducts } from "@/lib/products";
 import { blobErrorMessage } from "@/lib/blob-error";
+import type { Product } from "@/lib/product-types";
 
 export const dynamic = "force-dynamic";
+
+class NotFoundError extends Error {}
 
 export async function GET(
   _req: NextRequest,
@@ -36,29 +39,34 @@ export async function PUT(
     );
   }
 
-  const products = await getProducts();
-  const index = products.findIndex((p) => p.id === id);
-  if (index === -1) {
-    return NextResponse.json({ error: "Peça não encontrada." }, { status: 404 });
-  }
+  let updated!: Product;
 
-  const updated = {
-    ...products[index],
-    name: String(body.name),
-    category: String(body.category),
-    price: body.price === null || body.price === undefined ? null : Number(body.price),
-    isDraft: Boolean(body.isDraft),
-    sizes: Array.isArray(body.sizes) ? body.sizes : [],
-    description: body.description ? String(body.description) : "",
-    details: Array.isArray(body.details) ? body.details : [],
-    colors: body.colors,
-  };
-
-  products[index] = updated;
   try {
-    await saveProducts(products);
+    await mutateProducts((current) => {
+      const index = current.findIndex((p) => p.id === id);
+      if (index === -1) throw new NotFoundError();
+
+      updated = {
+        ...current[index],
+        name: String(body.name),
+        category: String(body.category),
+        price: body.price === null || body.price === undefined ? null : Number(body.price),
+        isDraft: Boolean(body.isDraft),
+        sizes: Array.isArray(body.sizes) ? body.sizes : [],
+        description: body.description ? String(body.description) : "",
+        details: Array.isArray(body.details) ? body.details : [],
+        colors: body.colors,
+      };
+
+      const next = [...current];
+      next[index] = updated;
+      return next;
+    });
     return NextResponse.json(updated);
   } catch (err) {
+    if (err instanceof NotFoundError) {
+      return NextResponse.json({ error: "Peça não encontrada." }, { status: 404 });
+    }
     return NextResponse.json({ error: blobErrorMessage(err) }, { status: 500 });
   }
 }
@@ -68,17 +76,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const products = await getProducts();
-  const filtered = products.filter((p) => p.id !== id);
-
-  if (filtered.length === products.length) {
-    return NextResponse.json({ error: "Peça não encontrada." }, { status: 404 });
-  }
 
   try {
-    await saveProducts(filtered);
+    await mutateProducts((current) => {
+      if (!current.some((p) => p.id === id)) throw new NotFoundError();
+      return current.filter((p) => p.id !== id);
+    });
     return NextResponse.json({ ok: true });
   } catch (err) {
+    if (err instanceof NotFoundError) {
+      return NextResponse.json({ error: "Peça não encontrada." }, { status: 404 });
+    }
     return NextResponse.json({ error: blobErrorMessage(err) }, { status: 500 });
   }
 }
