@@ -168,13 +168,19 @@ export async function mutateProducts(
     const { products: current, etag } = await readCatalogStrict();
     const next = mutate(current);
 
+    // O Blob devolve ETags "fracos" (prefixo W/), que o próprio ifMatch do
+    // Blob nunca reconhece como iguais em comparação estrita — sem remover
+    // o prefixo, a gravação falhava por "ETag mismatch" mesmo sem nenhuma
+    // outra escrita concorrente.
+    const strongEtag = etag?.replace(/^W\//, "");
+
     try {
       await put(CATALOG_PATH, JSON.stringify(next, null, 2), {
         access: "public",
         contentType: "application/json",
         addRandomSuffix: false,
         allowOverwrite: true,
-        ...(etag ? { ifMatch: etag } : {}),
+        ...(strongEtag ? { ifMatch: strongEtag } : {}),
       });
       return next;
     } catch (err) {
