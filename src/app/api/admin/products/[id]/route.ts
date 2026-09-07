@@ -87,6 +87,12 @@ export async function DELETE(
     if (err instanceof NotFoundError) {
       return NextResponse.json({ error: "Peça não encontrada." }, { status: 404 });
     }
-    return NextResponse.json({ error: blobErrorMessage(err) }, { status: 500 });
+    return NextResponse.json(
+      {
+        error: blobErrorMessage(err),
+        debug: err instanceof Error ? `${err.name}: ${err.message}\n${err.stack}` : String(err),
+      },
+      { status: 500 }
+    );
   }
 }
