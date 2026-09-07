@@ -12,22 +12,44 @@ npm run dev
 
 Depois acesse http://localhost:3000
 
-## Onde editar as coisas
+## Painel administrativo
 
-- **Produtos** (nome, preço, cor, tamanhos, descrição, fotos): `src/lib/products.ts`
-- **Fotos dos produtos**: `public/products/` — adicione o arquivo e referencie o caminho em `products.ts`
-- **WhatsApp, Instagram, e-mail, frete grátis**: `src/config/site.ts`
-- **Cores e fontes do site**: `src/app/globals.css`
+Acesse **`/admin`** no site (ex: `https://seu-site.vercel.app/admin`) para
+gerenciar as peças sem mexer em código: adicionar peça nova, subir fotos,
+editar categoria/preço/descrição/cores e excluir. É protegido por senha
+(variável `ADMIN_PASSWORD`) e não aparece em nenhum menu público.
+
+As peças e as fotos enviadas pelo painel ficam salvas no **Vercel Blob**
+(`src/lib/products.ts` só serve como catálogo inicial, usado até a primeira
+gravação feita pelo painel). Para o painel funcionar em produção, veja
+"Variáveis de ambiente necessárias" abaixo.
+
+Fotos aceitas: JPG, PNG ou WEBP, até 4MB. Fotos `.HEIC` do iPhone precisam
+ser convertidas antes (ao compartilhar a foto pelo iPhone, escolha a opção
+"Mais compatível").
+
+## Variáveis de ambiente necessárias
+
+Configure em **Vercel → seu projeto → Settings → Environment Variables**
+(e em `.env.local` para rodar localmente):
+
+| Variável | Para que serve |
+| --- | --- |
+| `ADMIN_PASSWORD` | Senha de login do painel `/admin` |
+| `ADMIN_SESSION_SECRET` | Chave aleatória usada para assinar o cookie de sessão do admin (qualquer string longa e aleatória) |
+| `BLOB_READ_WRITE_TOKEN` | Gerado automaticamente pela Vercel ao criar um Blob Store (Storage → Create Database → Blob) e conectá-lo ao projeto |
+
+Sem o `BLOB_READ_WRITE_TOKEN`, o site público continua funcionando
+normalmente (mostra o catálogo inicial), mas o painel não consegue salvar
+peças novas nem fotos — ele mostra um aviso claro pedindo para configurar
+essa variável.
 
 ## Peças "Em breve"
 
-5 peças já estão na vitrine com fotos reais, mas ainda sem preço/descrição
-final (`isDraft: true` em `products.ts`): Macaquinho Pink, Macaquinho
-Amarelo, Conjunto Preto e Conjunto Vermelho. Elas aparecem na loja com a
-etiqueta "Em breve" e um botão para perguntar no WhatsApp em vez de comprar.
-Assim que você tiver preço e descrição, edite o produto em `products.ts`,
-remova `isDraft: true`, preencha `price`, `sizes` e `description`/`details` —
-a peça passa a vender normalmente.
+Peças sem preço/descrição definidos ainda (`isDraft: true`) aparecem na
+loja com a etiqueta "Em breve" e um botão para perguntar no WhatsApp em vez
+de comprar. Preencha o preço e a descrição pelo painel `/admin` para a peça
+passar a vender normalmente.
 
 ## Como funciona a venda hoje
 

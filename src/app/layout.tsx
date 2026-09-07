@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
 import { Jost, Cormorant_Garamond } from "next/font/google";
 import "./globals.css";
-import { CartProvider } from "@/lib/cart-context";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
 import { siteConfig } from "@/config/site";
 
 const fontBody = Jost({
@@ -29,13 +26,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="pt-BR"
       className={`${fontBody.variable} ${fontDisplay.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <CartProvider>
-          <Header />
-          <main className="flex-1">{children}</main>
-          <Footer />
-        </CartProvider>
-      </body>
+      <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
 }

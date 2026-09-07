@@ -1,6 +1,8 @@
 import { ProductCard } from "@/components/ProductCard";
-import { getCategories, products } from "@/lib/products";
+import { getCategories, getProducts } from "@/lib/products";
 import Link from "next/link";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Loja — Chic & Fit",
@@ -12,7 +14,8 @@ export default async function LojaPage({
   searchParams: Promise<{ categoria?: string; busca?: string }>;
 }) {
   const { categoria, busca } = await searchParams;
-  const categories = getCategories();
+  const products = await getProducts();
+  const categories = await getCategories();
 
   let filtered = categoria
     ? products.filter((p) => p.category === categoria)

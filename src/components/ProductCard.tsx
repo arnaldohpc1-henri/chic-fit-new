@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Product } from "@/lib/products";
+import type { Product } from "@/lib/product-types";
 import { formatPrice } from "@/lib/format";
 
 const CYCLE_MS = 900;

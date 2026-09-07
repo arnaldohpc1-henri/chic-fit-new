@@ -1,11 +1,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ProductCard } from "@/components/ProductCard";
-import { products } from "@/lib/products";
+import { getProducts } from "@/lib/products";
 import { siteConfig } from "@/config/site";
 
-export default function Home() {
-  const featured = products;
+export const dynamic = "force-dynamic";
+
+export default async function Home() {
+  const featured = await getProducts();
 
   return (
     <div>

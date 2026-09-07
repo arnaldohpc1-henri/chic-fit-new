@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Product } from "@/lib/products";
+import type { Product } from "@/lib/product-types";
 import { useCart } from "@/lib/cart-context";
 import { siteConfig } from "@/config/site";
 

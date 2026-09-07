@@ -1,23 +1,13 @@
-export type ColorVariant = {
-  name: string;
-  images: string[];
-};
+import { put, head } from "@vercel/blob";
+import type { Product } from "./product-types";
 
-export type Product = {
-  id: string;
-  slug: string;
-  name: string;
-  category: string;
-  price: number | null;
-  sizes: string[];
-  description: string;
-  details: string[];
-  colors: ColorVariant[];
-  /** true = peça já exposta na vitrine mas aguardando preço/descrição final */
-  isDraft?: boolean;
-};
+export type { Product, ColorVariant } from "./product-types";
 
-export const products: Product[] = [
+const CATALOG_PATH = "data/products.json";
+
+// Catálogo inicial — usado apenas até a primeira gravação feita pelo painel
+// administrativo (a partir daí, os dados reais ficam no Vercel Blob).
+const SEED_PRODUCTS: Product[] = [
   {
     id: "macaquinho-canelado",
     slug: "macaquinho-canelado",
@@ -126,10 +116,34 @@ export const products: Product[] = [
   },
 ];
 
-export function getProductBySlug(slug: string): Product | undefined {
+export async function getProducts(): Promise<Product[]> {
+  try {
+    const info = await head(CATALOG_PATH);
+    const res = await fetch(info.url, { cache: "no-store" });
+    if (!res.ok) throw new Error("Falha ao buscar catálogo salvo.");
+    return (await res.json()) as Product[];
+  } catch {
+    // Ainda não existe catálogo salvo no Blob — usa os dados iniciais.
+    // Assim que o painel salvar qualquer alteração, o Blob passa a ser a fonte.
+    return SEED_PRODUCTS;
+  }
+}
+
+export async function saveProducts(products: Product[]): Promise<void> {
+  await put(CATALOG_PATH, JSON.stringify(products, null, 2), {
+    access: "public",
+    contentType: "application/json",
+    addRandomSuffix: false,
+    allowOverwrite: true,
+  });
+}
+
+export async function getProductBySlug(slug: string): Promise<Product | undefined> {
+  const products = await getProducts();
   return products.find((p) => p.slug === slug);
 }
 
-export function getCategories(): string[] {
+export async function getCategories(): Promise<string[]> {
+  const products = await getProducts();
   return Array.from(new Set(products.map((p) => p.category)));
 }

@@ -1,12 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { getProductBySlug, products } from "@/lib/products";
+import { getProducts } from "@/lib/products";
 import { ProductView } from "@/components/ProductView";
 import { ProductCard } from "@/components/ProductCard";
 
-export function generateStaticParams() {
-  return products.map((p) => ({ slug: p.slug }));
-}
+export const dynamic = "force-dynamic";
 
 export default async function ProdutoPage({
   params,
@@ -14,7 +12,8 @@ export default async function ProdutoPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const products = await getProducts();
+  const product = products.find((p) => p.slug === slug);
   if (!product) notFound();
 
   const related = products.filter(

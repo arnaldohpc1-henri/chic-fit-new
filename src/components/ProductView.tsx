@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { useState } from "react";
-import { Product } from "@/lib/products";
+import type { Product } from "@/lib/product-types";
 import { formatPrice } from "@/lib/format";
 import { ProductGallery } from "@/components/ProductGallery";
 import { AddToCartForm } from "@/components/AddToCartForm";
