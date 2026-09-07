@@ -187,7 +187,9 @@ export async function mutateProducts(
         err instanceof BlobPreconditionFailedError ||
         message.includes("Precondition failed") ||
         message.includes("ETag mismatch");
-      if (!isConflict || attempt === MAX_ATTEMPTS) throw err;
+      if (!isConflict || attempt === MAX_ATTEMPTS) {
+        throw new Error(`${message} [etag usado: ${JSON.stringify(etag)}]`);
+      }
       // outra gravação venceu a corrida — espera um pouco (com variação
       // aleatória, pra não colidir de novo com quem também está
       // tentando de novo agora) e lê os dados mais recentes na próxima volta
