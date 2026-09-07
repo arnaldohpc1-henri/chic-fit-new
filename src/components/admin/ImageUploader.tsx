@@ -2,6 +2,9 @@
 
 import Image from "next/image";
 import { useRef, useState } from "react";
+import { upload } from "@vercel/blob/client";
+
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 export function ImageUploader({
   images,
@@ -22,18 +25,23 @@ export function ImageUploader({
     try {
       const uploaded: string[] = [];
       for (const file of Array.from(files)) {
-        const formData = new FormData();
-        formData.append("file", file);
-        const res = await fetch("/api/admin/upload", {
-          method: "POST",
-          body: formData,
-        });
-        if (!res.ok) {
-          const data = await res.json().catch(() => ({}));
-          throw new Error(data.error ?? `Falha ao enviar ${file.name}`);
+        if (!ALLOWED_TYPES.includes(file.type)) {
+          throw new Error(
+            `Formato de "${file.name}" não aceito. Envie em JPG, PNG ou WEBP (fotos .HEIC do iPhone precisam ser convertidas antes — ao compartilhar a foto, escolha a opção "Mais compatível"/JPEG).`
+          );
         }
-        const data = await res.json();
-        uploaded.push(data.url as string);
+
+        const ext = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
+        const pathname = `products/${crypto.randomUUID()}.${ext}`;
+
+        // Envia direto do navegador para o Blob (não passa pelo servidor),
+        // então fotos grandes não esbarram no limite de tamanho de
+        // requisição da Vercel.
+        const blob = await upload(pathname, file, {
+          access: "public",
+          handleUploadUrl: "/api/admin/upload",
+        });
+        uploaded.push(blob.url);
       }
       onChange([...images, ...uploaded]);
     } catch (err) {
