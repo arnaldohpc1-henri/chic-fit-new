@@ -57,20 +57,20 @@ export default function AdminDashboardPage() {
           {products.map((p) => (
             <div key={p.id} className="flex items-center gap-4 p-4">
               <div className="relative h-16 w-14 shrink-0 overflow-hidden rounded-lg bg-border">
-                {p.colors[0]?.images[0] && (
-                  <Image
-                    src={p.colors[0].images[0]}
-                    alt=""
-                    fill
-                    sizes="56px"
-                    className="object-cover"
-                  />
-                )}
+                {(() => {
+                  const thumb = p.colors[0]?.images[0] ?? p.images?.[0];
+                  return (
+                    thumb && (
+                      <Image src={thumb} alt="" fill sizes="56px" className="object-cover" />
+                    )
+                  );
+                })()}
               </div>
               <div className="flex-1">
                 <p className="font-medium">{p.name}</p>
                 <p className="text-sm text-muted">
-                  {p.category} · {p.colors.map((c) => c.name).join(", ")}
+                  {p.category}
+                  {p.colors.length > 0 && ` · ${p.colors.map((c) => c.name).join(", ")}`}
                 </p>
               </div>
               <p className="text-sm font-medium">{formatPrice(p.price)}</p>

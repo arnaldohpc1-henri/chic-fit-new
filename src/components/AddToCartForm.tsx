@@ -12,7 +12,7 @@ export function AddToCartForm({
   image,
 }: {
   product: Product;
-  color: string;
+  color: string | null;
   image: string;
 }) {
   const { addItem } = useCart();
@@ -20,6 +20,9 @@ export function AddToCartForm({
   const [size, setSize] = useState(product.sizes[0] ?? "");
   const [qty, setQty] = useState(1);
   const [added, setAdded] = useState(false);
+
+  const colorRequired = product.colors.length > 1;
+  const colorMissing = colorRequired && !color;
 
   if (product.isDraft || product.price === null) {
     return (
@@ -30,7 +33,7 @@ export function AddToCartForm({
         </p>
         <a
           href={`https://wa.me/${siteConfig.whatsappNumber}?text=${encodeURIComponent(
-            `Olá! Tenho interesse na peça "${product.name} - ${color}" que vi no site.`
+            `Olá! Tenho interesse na peça "${product.name}${color ? ` - ${color}` : ""}" que vi no site.`
           )}`}
           target="_blank"
           rel="noreferrer"
@@ -43,6 +46,7 @@ export function AddToCartForm({
   }
 
   function handleAdd() {
+    if (colorMissing || !color) return;
     addItem(
       {
         productId: product.id,
@@ -110,11 +114,16 @@ export function AddToCartForm({
         </div>
       </div>
 
+      {colorMissing && (
+        <p className="text-sm text-accent">Selecione uma cor para continuar.</p>
+      )}
+
       <div className="flex flex-col gap-3 sm:flex-row">
         <button
           type="button"
           onClick={handleAdd}
-          className="flex-1 rounded-full bg-foreground px-6 py-3 text-sm font-medium uppercase tracking-wide text-white transition hover:bg-accent"
+          disabled={colorMissing}
+          className="flex-1 rounded-full bg-foreground px-6 py-3 text-sm font-medium uppercase tracking-wide text-white transition hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
         >
           {added ? "Adicionado!" : "Adicionar ao carrinho"}
         </button>
@@ -124,7 +133,8 @@ export function AddToCartForm({
             handleAdd();
             router.push("/carrinho");
           }}
-          className="flex-1 rounded-full border border-foreground px-6 py-3 text-sm font-medium uppercase tracking-wide transition hover:border-accent hover:text-accent"
+          disabled={colorMissing}
+          className="flex-1 rounded-full border border-foreground px-6 py-3 text-sm font-medium uppercase tracking-wide transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
         >
           Comprar agora
         </button>

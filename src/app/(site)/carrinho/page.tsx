@@ -38,7 +38,7 @@ export default function CarrinhoPage() {
       <div className="divide-y divide-border rounded-2xl border border-border bg-card">
         {items.map((item) => (
           <div
-            key={`${item.productId}-${item.size}`}
+            key={`${item.productId}-${item.color}-${item.size}`}
             className="flex gap-4 p-4 sm:p-5"
           >
             <div className="relative h-28 w-24 shrink-0 overflow-hidden rounded-xl bg-border">
@@ -73,7 +73,7 @@ export default function CarrinhoPage() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() =>
-                      setQty(item.productId, item.size, item.qty - 1)
+                      setQty(item.productId, item.color, item.size, item.qty - 1)
                     }
                     className="h-8 w-8 rounded-full border border-border hover:border-accent"
                     aria-label="Diminuir quantidade"
@@ -83,7 +83,7 @@ export default function CarrinhoPage() {
                   <span className="w-5 text-center text-sm">{item.qty}</span>
                   <button
                     onClick={() =>
-                      setQty(item.productId, item.size, item.qty + 1)
+                      setQty(item.productId, item.color, item.size, item.qty + 1)
                     }
                     className="h-8 w-8 rounded-full border border-border hover:border-accent"
                     aria-label="Aumentar quantidade"
@@ -92,7 +92,7 @@ export default function CarrinhoPage() {
                   </button>
                 </div>
                 <button
-                  onClick={() => removeItem(item.productId, item.size)}
+                  onClick={() => removeItem(item.productId, item.color, item.size)}
                   className="text-sm text-muted underline-offset-2 hover:text-accent hover:underline"
                 >
                   Remover

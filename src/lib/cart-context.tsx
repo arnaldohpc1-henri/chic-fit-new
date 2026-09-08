@@ -23,8 +23,8 @@ export type CartItem = {
 type CartContextValue = {
   items: CartItem[];
   addItem: (item: Omit<CartItem, "qty">, qty?: number) => void;
-  removeItem: (productId: string, size: string) => void;
-  setQty: (productId: string, size: string, qty: number) => void;
+  removeItem: (productId: string, color: string, size: string) => void;
+  setQty: (productId: string, color: string, size: string, qty: number) => void;
   clear: () => void;
   count: number;
   subtotal: number;
@@ -34,8 +34,11 @@ const CartContext = createContext<CartContextValue | null>(null);
 
 const STORAGE_KEY = "chicfit:cart";
 
-function sameLine(a: { productId: string; size: string }, b: { productId: string; size: string }) {
-  return a.productId === b.productId && a.size === b.size;
+function sameLine(
+  a: { productId: string; color: string; size: string },
+  b: { productId: string; color: string; size: string }
+) {
+  return a.productId === b.productId && a.color === b.color && a.size === b.size;
 }
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
@@ -74,14 +77,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  const removeItem = useCallback((productId: string, size: string) => {
-    setItems((prev) => prev.filter((i) => !sameLine(i, { productId, size })));
+  const removeItem = useCallback((productId: string, color: string, size: string) => {
+    setItems((prev) => prev.filter((i) => !sameLine(i, { productId, color, size })));
   }, []);
 
-  const setQty = useCallback((productId: string, size: string, qty: number) => {
+  const setQty = useCallback((productId: string, color: string, size: string, qty: number) => {
     setItems((prev) =>
       prev
-        .map((i) => (sameLine(i, { productId, size }) ? { ...i, qty } : i))
+        .map((i) => (sameLine(i, { productId, color, size }) ? { ...i, qty } : i))
         .filter((i) => i.qty > 0)
     );
   }, []);

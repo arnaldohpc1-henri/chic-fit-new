@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProducts, mutateProducts } from "@/lib/products";
+import { getProducts, mutateProducts, normalizeColor } from "@/lib/products";
 import type { Product } from "@/lib/product-types";
 import { blobErrorMessage } from "@/lib/blob-error";
 
@@ -34,10 +34,11 @@ export async function POST(req: NextRequest) {
     !body?.name ||
     !body?.category ||
     !Array.isArray(body?.colors) ||
-    body.colors.length === 0
+    body.colors.length === 0 ||
+    body.colors.some((c: { name?: unknown }) => !c?.name || !String(c.name).trim())
   ) {
     return NextResponse.json(
-      { error: "Preencha nome, categoria e ao menos uma cor com foto." },
+      { error: "Preencha nome, categoria e ao menos uma cor." },
       { status: 400 }
     );
   }
@@ -59,7 +60,8 @@ export async function POST(req: NextRequest) {
         sizes: Array.isArray(body.sizes) ? body.sizes : [],
         description: body.description ? String(body.description) : "",
         details: Array.isArray(body.details) ? body.details : [],
-        colors: body.colors,
+        images: Array.isArray(body.images) ? body.images : [],
+        colors: body.colors.map(normalizeColor),
       };
 
       return [...current, created];

@@ -9,16 +9,19 @@ import { formatPrice } from "@/lib/format";
 const CYCLE_MS = 900;
 
 export function ProductCard({ product }: { product: Product }) {
+  const hasColors = product.colors.length > 0;
   const [activeColor, setActiveColor] = useState(0);
   const [imgIndex, setImgIndex] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const color = product.colors[activeColor];
+  const color = hasColors ? product.colors[activeColor] : null;
+  const displayImages = color?.images.length ? color.images : product.images;
+  const colorLabel = color?.name ?? "";
 
   function startCycle() {
-    if (color.images.length <= 1) return;
+    if (displayImages.length <= 1) return;
     stopCycle();
     intervalRef.current = setInterval(() => {
-      setImgIndex((i) => (i + 1) % color.images.length);
+      setImgIndex((i) => (i + 1) % displayImages.length);
     }, CYCLE_MS);
   }
 
@@ -33,14 +36,14 @@ export function ProductCard({ product }: { product: Product }) {
   // Em telas sem mouse (celular/tablet) não existe hover, então a peça
   // alterna as fotos sozinha para manter a vitrine interativa também lá.
   useEffect(() => {
-    if (color.images.length <= 1) return;
+    if (displayImages.length <= 1) return;
     const hasHover = window.matchMedia("(hover: hover)").matches;
     if (hasHover) return;
     const id = setInterval(() => {
-      setImgIndex((i) => (i + 1) % color.images.length);
+      setImgIndex((i) => (i + 1) % displayImages.length);
     }, CYCLE_MS);
     return () => clearInterval(id);
-  }, [color]);
+  }, [color, displayImages.length]);
 
   return (
     <div className="group block overflow-hidden rounded-2xl bg-card">
@@ -50,11 +53,11 @@ export function ProductCard({ product }: { product: Product }) {
         onMouseLeave={stopCycle}
         className="relative block aspect-[3/4] overflow-hidden bg-border"
       >
-        {color.images.map((img, i) => (
+        {displayImages.map((img, i) => (
           <Image
             key={img}
             src={img}
-            alt={`${product.name} — ${color.name}`}
+            alt={`${product.name}${colorLabel ? ` — ${colorLabel}` : ""}`}
             fill
             sizes="(min-width: 1024px) 25vw, (min-width: 640px) 33vw, 50vw"
             className={`object-cover transition-opacity duration-300 group-hover:scale-105 ${
@@ -67,9 +70,9 @@ export function ProductCard({ product }: { product: Product }) {
             Em breve
           </span>
         )}
-        {color.images.length > 1 && (
+        {displayImages.length > 1 && (
           <div className="absolute bottom-2 left-1/2 flex -translate-x-1/2 gap-1">
-            {color.images.map((_, i) => (
+            {displayImages.map((_, i) => (
               <span
                 key={i}
                 className={`h-1.5 w-1.5 rounded-full transition-colors ${
@@ -89,11 +92,11 @@ export function ProductCard({ product }: { product: Product }) {
             {product.name}
           </h3>
         </Link>
-        <p className="text-sm text-muted">{color.name}</p>
+        {colorLabel && <p className="text-sm text-muted">{colorLabel}</p>}
         <div className="mt-2 flex items-center justify-between">
           <p className="text-sm font-medium">{formatPrice(product.price)}</p>
           {product.colors.length > 1 && (
-            <div className="flex gap-1">
+            <div className="flex gap-1.5">
               {product.colors.map((c, i) => (
                 <button
                   key={c.name}
@@ -104,12 +107,13 @@ export function ProductCard({ product }: { product: Product }) {
                     setActiveColor(i);
                   }}
                   aria-label={`Ver cor ${c.name}`}
-                  className={`relative h-6 w-6 overflow-hidden rounded-full border-2 transition ${
-                    activeColor === i ? "border-accent" : "border-transparent"
+                  style={{ backgroundColor: c.hex }}
+                  className={`h-5 w-5 shrink-0 rounded-full border transition ${
+                    activeColor === i
+                      ? "border-accent ring-2 ring-accent ring-offset-1 ring-offset-card"
+                      : "border-border/60"
                   }`}
-                >
-                  <Image src={c.images[0]} alt="" fill sizes="24px" className="object-cover" />
-                </button>
+                />
               ))}
             </div>
           )}

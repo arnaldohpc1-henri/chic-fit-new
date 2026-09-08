@@ -1,9 +1,44 @@
 import { put, head, BlobPreconditionFailedError } from "@vercel/blob";
-import type { Product } from "./product-types";
+import type { Product, ColorVariant } from "./product-types";
 
 export type { Product, ColorVariant } from "./product-types";
 
 const CATALOG_PATH = "data/products.json";
+
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
+const DEFAULT_HEX = "#CCCCCC";
+
+export function isValidHex(value: unknown): value is string {
+  return typeof value === "string" && HEX_RE.test(value.trim());
+}
+
+export function normalizeHex(value: string): string {
+  return value.trim().toUpperCase();
+}
+
+/**
+ * Deixa produtos vindos do Blob (ou do catálogo inicial) sempre no formato
+ * atual, mesmo que tenham sido salvos antes da cor ganhar `hex` e a peça
+ * ganhar imagens gerais — isso é o que mantém peças antigas funcionando sem
+ * precisar de uma migration.
+ */
+export function normalizeColor(color: Partial<ColorVariant> & { name: string }): ColorVariant {
+  return {
+    name: color.name,
+    hex: isValidHex(color.hex) ? normalizeHex(color.hex) : DEFAULT_HEX,
+    images: Array.isArray(color.images) ? color.images : [],
+  };
+}
+
+export function normalizeProduct(product: Product): Product {
+  const colors = Array.isArray(product.colors) ? product.colors.map(normalizeColor) : [];
+  const images =
+    Array.isArray(product.images) && product.images.length > 0
+      ? product.images
+      : colors.find((c) => c.images.length > 0)?.images ?? [];
+
+  return { ...product, images, colors };
+}
 
 // Catálogo inicial — usado apenas até a primeira gravação feita pelo painel
 // administrativo (a partir daí, os dados reais ficam no Vercel Blob).
@@ -23,9 +58,11 @@ const SEED_PRODUCTS: Product[] = [
       "Caimento que valoriza o corpo",
       "Tamanho único — veste do 36 ao 42",
     ],
+    images: [],
     colors: [
       {
         name: "Chumbo",
+        hex: "#4A4A4A",
         images: [
           "/products/macaquinho-canelado-chumbo-1.jpg",
           "/products/macaquinho-canelado-chumbo-costas.jpg",
@@ -43,9 +80,11 @@ const SEED_PRODUCTS: Product[] = [
     description:
       "Detalhes completos (preço, tamanhos e descrição) chegando em breve. Fale com a gente pelo WhatsApp para mais informações sobre esta peça.",
     details: [],
+    images: [],
     colors: [
       {
         name: "Pink",
+        hex: "#FF69B4",
         images: [
           "/products/macaquinho-canelado-pink-1.jpg",
           "/products/macaquinho-canelado-pink-2.jpg",
@@ -64,9 +103,11 @@ const SEED_PRODUCTS: Product[] = [
     description:
       "Detalhes completos (preço, tamanhos e descrição) chegando em breve. Fale com a gente pelo WhatsApp para mais informações sobre esta peça.",
     details: [],
+    images: [],
     colors: [
       {
         name: "Amarelo",
+        hex: "#FFD400",
         images: [
           "/products/macaquinho-canelado-amarelo-frente.jpg",
           "/products/macaquinho-canelado-amarelo-costas.jpg",
@@ -85,9 +126,11 @@ const SEED_PRODUCTS: Product[] = [
     description:
       "Detalhes completos (preço, tamanhos e descrição) chegando em breve. Fale com a gente pelo WhatsApp para mais informações sobre esta peça.",
     details: [],
+    images: [],
     colors: [
       {
         name: "Preto",
+        hex: "#000000",
         images: ["/products/conjunto-fitness-preto-1.jpg"],
       },
     ],
@@ -103,9 +146,11 @@ const SEED_PRODUCTS: Product[] = [
     description:
       "Detalhes completos (preço, tamanhos e descrição) chegando em breve. Fale com a gente pelo WhatsApp para mais informações sobre esta peça.",
     details: [],
+    images: [],
     colors: [
       {
         name: "Vermelho",
+        hex: "#C0392B",
         images: [
           "/products/conjunto-fitness-vermelho-1.jpg",
           "/products/conjunto-fitness-vermelho-2.jpg",
@@ -144,12 +189,13 @@ async function readCatalogForMutation(): Promise<{ products: Product[]; etag?: s
 export async function getProducts(): Promise<Product[]> {
   try {
     const info = await head(CATALOG_PATH);
-    return await fetchCatalogBody(info.url);
+    const products = await fetchCatalogBody(info.url);
+    return products.map(normalizeProduct);
   } catch {
     // Pode ser "realmente nunca salvo" ou uma falha pontual de leitura —
     // para uma página pública, mostrar o catálogo inicial é melhor do que
     // quebrar a página. Isso não grava nada, então é seguro.
-    return SEED_PRODUCTS;
+    return SEED_PRODUCTS.map(normalizeProduct);
   }
 }
 

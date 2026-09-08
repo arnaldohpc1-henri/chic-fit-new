@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
 import type { Product } from "@/lib/product-types";
 import { formatPrice } from "@/lib/format";
@@ -8,16 +7,32 @@ import { ProductGallery } from "@/components/ProductGallery";
 import { AddToCartForm } from "@/components/AddToCartForm";
 
 export function ProductView({ product }: { product: Product }) {
-  const [colorIndex, setColorIndex] = useState(0);
-  const color = product.colors[colorIndex];
+  const hasColors = product.colors.length > 0;
+  const [colorIndex, setColorIndex] = useState<number | null>(
+    product.colors.length === 1 ? 0 : null
+  );
+
+  const selectedColor = colorIndex !== null ? product.colors[colorIndex] : null;
+
+  const galleryImages = selectedColor?.images.length
+    ? selectedColor.images
+    : product.images.length
+      ? product.images
+      : product.colors.find((c) => c.images.length > 0)?.images ?? [];
+
+  const galleryKey = selectedColor ? selectedColor.name : "geral";
 
   return (
     <div className="grid gap-10 lg:grid-cols-2">
-      <ProductGallery
-        key={color.name}
-        images={color.images}
-        alt={`${product.name} — ${color.name}`}
-      />
+      {galleryImages.length > 0 ? (
+        <ProductGallery
+          key={galleryKey}
+          images={galleryImages}
+          alt={`${product.name}${selectedColor ? ` — ${selectedColor.name}` : ""}`}
+        />
+      ) : (
+        <div className="aspect-[3/4] rounded-2xl bg-border" />
+      )}
 
       <div>
         <p className="text-xs uppercase tracking-wide text-muted">
@@ -26,35 +41,38 @@ export function ProductView({ product }: { product: Product }) {
         <h1 className="mt-1 font-display text-3xl sm:text-4xl">
           {product.name}
         </h1>
-        <p className="mt-1 text-muted">Cor: {color.name}</p>
+        {!hasColors ? null : product.colors.length === 1 ? (
+          <p className="mt-1 text-muted">Cor: {product.colors[0].name}</p>
+        ) : (
+          <p className="mt-1 text-muted">
+            Cor: {selectedColor ? selectedColor.name : "selecione uma cor"}
+          </p>
+        )}
         <p className="mt-4 text-2xl font-medium">
           {formatPrice(product.price)}
         </p>
 
-        {product.colors.length > 1 && (
+        {hasColors && product.colors.length > 1 && (
           <div className="mt-5">
             <p className="mb-2 text-xs uppercase tracking-wide text-muted">
-              Cor: {color.name}
+              Escolha a cor
             </p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-3">
               {product.colors.map((c, i) => (
                 <button
                   key={c.name}
                   type="button"
                   onClick={() => setColorIndex(i)}
                   aria-label={`Ver cor ${c.name}`}
-                  className={`relative h-14 w-14 overflow-hidden rounded-lg border-2 transition ${
-                    colorIndex === i ? "border-accent" : "border-border"
+                  aria-pressed={colorIndex === i}
+                  title={c.name}
+                  style={{ backgroundColor: c.hex }}
+                  className={`h-9 w-9 rounded-full border transition ${
+                    colorIndex === i
+                      ? "border-accent ring-2 ring-accent ring-offset-2 ring-offset-background"
+                      : "border-border/60 hover:ring-2 hover:ring-border hover:ring-offset-2 hover:ring-offset-background"
                   }`}
-                >
-                  <Image
-                    src={c.images[0]}
-                    alt={c.name}
-                    fill
-                    sizes="56px"
-                    className="object-cover"
-                  />
-                </button>
+                />
               ))}
             </div>
           </div>
@@ -78,8 +96,8 @@ export function ProductView({ product }: { product: Product }) {
         <div className="mt-8">
           <AddToCartForm
             product={product}
-            color={color.name}
-            image={color.images[0]}
+            color={selectedColor?.name ?? null}
+            image={galleryImages[0] ?? ""}
           />
         </div>
       </div>

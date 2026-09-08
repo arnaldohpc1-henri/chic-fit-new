@@ -230,7 +230,7 @@ export default function CheckoutPage() {
           <ul className="space-y-3 text-sm">
             {items.map((item) => (
               <li
-                key={`${item.productId}-${item.size}`}
+                key={`${item.productId}-${item.color}-${item.size}`}
                 className="flex justify-between gap-3"
               >
                 <span className="text-muted">

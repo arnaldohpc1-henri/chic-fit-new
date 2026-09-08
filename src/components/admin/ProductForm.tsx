@@ -16,8 +16,12 @@ type FormState = {
   sizesText: string;
   description: string;
   detailsText: string;
+  images: string[];
   colors: ColorVariant[];
 };
+
+const DEFAULT_HEX = "#000000";
+const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
 const EMPTY_FORM: FormState = {
   name: "",
@@ -26,7 +30,8 @@ const EMPTY_FORM: FormState = {
   sizesText: "",
   description: "",
   detailsText: "",
-  colors: [{ name: "", images: [] }],
+  images: [],
+  colors: [{ name: "", hex: DEFAULT_HEX, images: [] }],
 };
 
 function productToForm(p: Product): FormState {
@@ -37,7 +42,15 @@ function productToForm(p: Product): FormState {
     sizesText: p.sizes.join(", "),
     description: p.description,
     detailsText: p.details.join("\n"),
-    colors: p.colors.length > 0 ? p.colors : [{ name: "", images: [] }],
+    images: p.images ?? [],
+    colors:
+      p.colors.length > 0
+        ? p.colors.map((c) => ({
+            name: c.name,
+            hex: HEX_RE.test(c.hex ?? "") ? c.hex : DEFAULT_HEX,
+            images: c.images,
+          }))
+        : [{ name: "", hex: DEFAULT_HEX, images: [] }],
   };
 }
 
@@ -80,11 +93,24 @@ export function ProductForm(props: Props) {
   }
 
   function addColor() {
-    setForm((f) => ({ ...f, colors: [...f.colors, { name: "", images: [] }] }));
+    setForm((f) => ({
+      ...f,
+      colors: [...f.colors, { name: "", hex: DEFAULT_HEX, images: [] }],
+    }));
   }
 
   function removeColor(index: number) {
     setForm((f) => ({ ...f, colors: f.colors.filter((_, i) => i !== index) }));
+  }
+
+  function moveColor(index: number, direction: -1 | 1) {
+    setForm((f) => {
+      const target = index + direction;
+      if (target < 0 || target >= f.colors.length) return f;
+      const colors = [...f.colors];
+      [colors[index], colors[target]] = [colors[target], colors[index]];
+      return { ...f, colors };
+    });
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -99,15 +125,30 @@ export function ProductForm(props: Props) {
       return;
     }
 
-    const validColors = form.colors
-      .map((c) => ({ name: c.name.trim(), images: c.images }))
+    const namedColors = form.colors
+      .map((c) => ({ ...c, name: c.name.trim() }))
       .filter((c) => c.name.length > 0);
 
-    if (!form.name.trim() || !form.category.trim() || validColors.length === 0) {
+    if (!form.name.trim() || !form.category.trim() || namedColors.length === 0) {
       setError("Preencha nome, categoria e ao menos uma cor.");
       setSaving(false);
       return;
     }
+
+    const invalidColor = namedColors.find((c) => !HEX_RE.test(c.hex));
+    if (invalidColor) {
+      setError(
+        `Código hex inválido para a cor "${invalidColor.name}". Use o formato #RRGGBB.`
+      );
+      setSaving(false);
+      return;
+    }
+
+    const validColors = namedColors.map((c) => ({
+      name: c.name,
+      hex: c.hex.toUpperCase(),
+      images: c.images,
+    }));
 
     const payload = {
       name: form.name.trim(),
@@ -123,6 +164,7 @@ export function ProductForm(props: Props) {
         .split("\n")
         .map((d) => d.trim())
         .filter(Boolean),
+      images: form.images,
       colors: validColors,
     };
 
@@ -258,8 +300,27 @@ export function ProductForm(props: Props) {
       </div>
 
       <div>
+        <label className="mb-1 block text-xs uppercase tracking-wide text-muted">
+          Fotos gerais da peça
+        </label>
+        <p className="mb-2 text-xs text-muted">
+          Usadas na vitrine e na página do produto quando a cor selecionada não
+          tiver foto própria.
+        </p>
+        <ImageUploader
+          images={form.images}
+          onChange={(images) => setForm((f) => ({ ...f, images }))}
+        />
+      </div>
+
+      <div>
         <div className="mb-2 flex items-center justify-between">
-          <p className="text-xs uppercase tracking-wide text-muted">Cores e fotos *</p>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted">Cores disponíveis *</p>
+            <p className="mt-1 text-xs text-muted">
+              A foto de cada cor é opcional — sem ela, a peça usa as fotos gerais acima.
+            </p>
+          </div>
           <button
             type="button"
             onClick={addColor}
@@ -272,13 +333,49 @@ export function ProductForm(props: Props) {
         <div className="space-y-4">
           {form.colors.map((color, i) => (
             <div key={i} className="rounded-xl border border-border bg-card p-4">
-              <div className="mb-3 flex items-center gap-3">
+              <div className="mb-3 flex flex-wrap items-center gap-3">
                 <input
                   placeholder="Nome da cor (ex: Preto)"
                   value={color.name}
                   onChange={(e) => updateColor(i, { name: e.target.value })}
-                  className="flex-1 rounded-xl border border-border bg-background px-4 py-2 outline-none focus:border-accent"
+                  className="min-w-[160px] flex-1 rounded-xl border border-border bg-background px-4 py-2 outline-none focus:border-accent"
                 />
+
+                <input
+                  type="color"
+                  value={HEX_RE.test(color.hex) ? color.hex : DEFAULT_HEX}
+                  onChange={(e) => updateColor(i, { hex: e.target.value })}
+                  aria-label={`Selecionar cor visual para ${color.name || "esta cor"}`}
+                  className="h-10 w-10 shrink-0 cursor-pointer rounded-lg border border-border bg-background p-0.5"
+                />
+                <input
+                  placeholder="#RRGGBB"
+                  value={color.hex}
+                  onChange={(e) => updateColor(i, { hex: e.target.value })}
+                  className="w-28 shrink-0 rounded-xl border border-border bg-background px-3 py-2 text-sm uppercase outline-none focus:border-accent"
+                />
+
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => moveColor(i, -1)}
+                    disabled={i === 0}
+                    aria-label="Mover cor para cima"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted hover:border-accent hover:text-accent disabled:opacity-30"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveColor(i, 1)}
+                    disabled={i === form.colors.length - 1}
+                    aria-label="Mover cor para baixo"
+                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-border text-muted hover:border-accent hover:text-accent disabled:opacity-30"
+                  >
+                    ↓
+                  </button>
+                </div>
+
                 {form.colors.length > 1 && (
                   <button
                     type="button"
@@ -289,6 +386,7 @@ export function ProductForm(props: Props) {
                   </button>
                 )}
               </div>
+              <p className="mb-2 text-xs text-muted">Foto desta cor (opcional)</p>
               <ImageUploader
                 images={color.images}
                 onChange={(images) => updateColor(i, { images })}
