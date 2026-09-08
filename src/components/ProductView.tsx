@@ -41,22 +41,13 @@ export function ProductView({ product }: { product: Product }) {
         <h1 className="mt-1 font-display text-3xl sm:text-4xl">
           {product.name}
         </h1>
-        {!hasColors ? null : product.colors.length === 1 ? (
-          <p className="mt-1 text-muted">Cor: {product.colors[0].name}</p>
-        ) : (
-          <p className="mt-1 text-muted">
-            Cor: {selectedColor ? selectedColor.name : "selecione uma cor"}
-          </p>
-        )}
         <p className="mt-4 text-2xl font-medium">
           {formatPrice(product.price)}
         </p>
 
-        {hasColors && product.colors.length > 1 && (
+        {hasColors && (
           <div className="mt-5">
-            <p className="mb-2 text-xs uppercase tracking-wide text-muted">
-              Escolha a cor
-            </p>
+            <p className="mb-2 text-xs uppercase tracking-wide text-muted">Cor</p>
             <div className="flex flex-wrap gap-3">
               {product.colors.map((c, i) => (
                 <button

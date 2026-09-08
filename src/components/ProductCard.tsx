@@ -92,15 +92,15 @@ export function ProductCard({ product }: { product: Product }) {
             {product.name}
           </h3>
         </Link>
-        {colorLabel && <p className="text-sm text-muted">{colorLabel}</p>}
         <div className="mt-2 flex items-center justify-between">
           <p className="text-sm font-medium">{formatPrice(product.price)}</p>
-          {product.colors.length > 1 && (
+          {hasColors && (
             <div className="flex gap-1.5">
               {product.colors.map((c, i) => (
                 <button
                   key={c.name}
                   type="button"
+                  title={c.name}
                   onClick={(e) => {
                     e.preventDefault();
                     stopCycle();
