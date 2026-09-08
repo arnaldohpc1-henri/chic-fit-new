@@ -5,6 +5,50 @@ import { useRef, useState } from "react";
 import { upload } from "@vercel/blob/client";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const MAX_DIMENSION = 1600;
+const JPEG_QUALITY = 0.85;
+
+/**
+ * Redimensiona e recomprime a foto no navegador antes de enviar. Fotos de
+ * celular (principalmente PNG) podem vir enormes — isso evita esbarrar no
+ * limite de tamanho do Blob e deixa o site mais rápido para quem visita.
+ */
+async function compressImage(file: File): Promise<File> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    let { width, height } = bitmap;
+
+    if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+      if (width > height) {
+        height = Math.round((height * MAX_DIMENSION) / width);
+        width = MAX_DIMENSION;
+      } else {
+        width = Math.round((width * MAX_DIMENSION) / height);
+        height = MAX_DIMENSION;
+      }
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+
+    ctx.drawImage(bitmap, 0, 0, width, height);
+
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", JPEG_QUALITY)
+    );
+    if (!blob) return file;
+
+    return new File([blob], file.name.replace(/\.\w+$/, ".jpg"), {
+      type: "image/jpeg",
+    });
+  } catch {
+    // Se algo der errado ao processar, envia o arquivo original mesmo.
+    return file;
+  }
+}
 
 export function ImageUploader({
   images,
@@ -24,13 +68,14 @@ export function ImageUploader({
 
     try {
       const uploaded: string[] = [];
-      for (const file of Array.from(files)) {
-        if (!ALLOWED_TYPES.includes(file.type)) {
+      for (const original of Array.from(files)) {
+        if (!ALLOWED_TYPES.includes(original.type)) {
           throw new Error(
-            `Formato de "${file.name}" não aceito. Envie em JPG, PNG ou WEBP (fotos .HEIC do iPhone precisam ser convertidas antes — ao compartilhar a foto, escolha a opção "Mais compatível"/JPEG).`
+            `Formato de "${original.name}" não aceito. Envie em JPG, PNG ou WEBP (fotos .HEIC do iPhone precisam ser convertidas antes — ao compartilhar a foto, escolha a opção "Mais compatível"/JPEG).`
           );
         }
 
+        const file = await compressImage(original);
         const ext = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
         const pathname = `products/${crypto.randomUUID()}.${ext}`;
 

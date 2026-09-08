@@ -3,9 +3,10 @@ import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
 import { ADMIN_COOKIE_NAME, isValidSessionToken } from "@/lib/admin-auth";
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-const MAX_SIZE = 10 * 1024 * 1024; // 10MB — o arquivo vai direto do navegador
-// para o Blob (não passa pelo corpo desta função), então não esbarra no
-// limite de tamanho de requisição da Vercel que quebrava fotos maiores.
+// 25MB de margem: o navegador já comprime a foto antes de enviar (ver
+// ImageUploader), então isso raramente é atingido — é só uma rede de
+// segurança para quando a compressão falha e o arquivo original é enviado.
+const MAX_SIZE = 25 * 1024 * 1024;
 
 export async function POST(req: NextRequest) {
   const body = (await req.json()) as HandleUploadBody;
