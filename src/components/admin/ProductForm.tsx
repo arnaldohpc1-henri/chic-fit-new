@@ -9,6 +9,12 @@ type Props =
   | { mode: "create"; productId?: undefined }
   | { mode: "edit"; productId: string };
 
+type FormVariant = {
+  colorName: string;
+  size: string;
+  stock: number;
+};
+
 type FormState = {
   name: string;
   category: string;
@@ -18,6 +24,7 @@ type FormState = {
   detailsText: string;
   images: string[];
   colors: ColorVariant[];
+  variants: FormVariant[];
 };
 
 const DEFAULT_HEX = "#000000";
@@ -32,6 +39,7 @@ const EMPTY_FORM: FormState = {
   detailsText: "",
   images: [],
   colors: [{ name: "", hex: DEFAULT_HEX, images: [] }],
+  variants: [],
 };
 
 function productToForm(p: Product): FormState {
@@ -51,7 +59,16 @@ function productToForm(p: Product): FormState {
             images: c.images,
           }))
         : [{ name: "", hex: DEFAULT_HEX, images: [] }],
+    variants: (p.variants ?? []).map((v) => ({
+      colorName: v.colorName,
+      size: v.size,
+      stock: v.stock,
+    })),
   };
+}
+
+function variantKey(colorName: string, size: string): string {
+  return `${colorName}::${size}`;
 }
 
 export function ProductForm(props: Props) {
@@ -113,6 +130,43 @@ export function ProductForm(props: Props) {
     });
   }
 
+  function generateVariants() {
+    setForm((f) => {
+      const colorNames = f.colors.map((c) => c.name.trim()).filter(Boolean);
+      const sizeList = f.sizesText
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const colorKeys = colorNames.length > 0 ? colorNames : [""];
+      const sizeKeys = sizeList.length > 0 ? sizeList : [""];
+
+      const existingStock = new Map(
+        f.variants.map((v) => [variantKey(v.colorName, v.size), v.stock])
+      );
+
+      const variants: FormVariant[] = [];
+      for (const colorName of colorKeys) {
+        for (const size of sizeKeys) {
+          variants.push({
+            colorName,
+            size,
+            stock: existingStock.get(variantKey(colorName, size)) ?? 0,
+          });
+        }
+      }
+
+      return { ...f, variants };
+    });
+  }
+
+  function updateVariantStock(index: number, stock: number) {
+    const safeStock = Number.isFinite(stock) ? Math.max(0, Math.floor(stock)) : 0;
+    setForm((f) => ({
+      ...f,
+      variants: f.variants.map((v, i) => (i === index ? { ...v, stock: safeStock } : v)),
+    }));
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -166,6 +220,7 @@ export function ProductForm(props: Props) {
         .filter(Boolean),
       images: form.images,
       colors: validColors,
+      variants: form.variants,
     };
 
     try {
@@ -394,6 +449,74 @@ export function ProductForm(props: Props) {
             </div>
           ))}
         </div>
+      </div>
+
+      <div>
+        <div className="mb-2 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted">
+              Variações (cor × tamanho)
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              Gere as combinações e informe o estoque de cada uma. Uma combinação
+              com estoque 0 aparece esgotada na loja.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={generateVariants}
+            className="shrink-0 text-sm text-accent hover:underline"
+          >
+            Gerar variações
+          </button>
+        </div>
+
+        {form.variants.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-border p-4 text-sm text-muted">
+            Nenhuma variação gerada ainda. Cadastre as cores e os tamanhos acima e
+            clique em &quot;Gerar variações&quot;.
+          </p>
+        ) : (
+          <div className="overflow-x-auto rounded-xl border border-border">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border bg-card text-left text-xs uppercase tracking-wide text-muted">
+                  <th className="px-3 py-2 font-medium">Cor</th>
+                  <th className="px-3 py-2 font-medium">Tamanho</th>
+                  <th className="px-3 py-2 font-medium">Estoque</th>
+                  <th className="px-3 py-2 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {form.variants.map((v, i) => (
+                  <tr
+                    key={variantKey(v.colorName, v.size)}
+                    className="border-b border-border last:border-0"
+                  >
+                    <td className="px-3 py-2">{v.colorName || "—"}</td>
+                    <td className="px-3 py-2">{v.size || "—"}</td>
+                    <td className="px-3 py-2">
+                      <input
+                        type="number"
+                        min="0"
+                        value={v.stock}
+                        onChange={(e) => updateVariantStock(i, Number(e.target.value))}
+                        className="w-20 rounded-lg border border-border bg-background px-2 py-1 outline-none focus:border-accent"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      {v.stock > 0 ? (
+                        <span className="text-muted">Disponível</span>
+                      ) : (
+                        <span className="text-red-600">Esgotado</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {error && <p className="text-sm text-red-600">{error}</p>}

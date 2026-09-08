@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createOrder } from "@/lib/orders";
+import { decrementStockForOrder } from "@/lib/products";
 import { OrderItem } from "@/lib/order-types";
 
 type RequestBody = {
@@ -51,6 +52,16 @@ export async function POST(req: NextRequest) {
     items: body.items,
     subtotal: body.subtotal ?? 0,
   });
+
+  // Best-effort: a baixa de estoque não deve derrubar o pedido já
+  // confirmado caso o Blob tenha um problema pontual de escrita.
+  try {
+    await decrementStockForOrder(
+      body.items.map((i) => ({ productId: i.productId, color: i.color, size: i.size, qty: i.qty }))
+    );
+  } catch (err) {
+    console.error(`Falha ao baixar estoque do pedido ${order.id}`, err);
+  }
 
   return NextResponse.json(order, { status: 201 });
 }

@@ -1,7 +1,7 @@
 import { put, head, BlobPreconditionFailedError } from "@vercel/blob";
-import type { Product, ColorVariant } from "./product-types";
+import type { Product, ColorVariant, ProductVariant } from "./product-types";
 
-export type { Product, ColorVariant } from "./product-types";
+export type { Product, ColorVariant, ProductVariant } from "./product-types";
 
 const CATALOG_PATH = "data/products.json";
 
@@ -30,14 +30,62 @@ export function normalizeColor(color: Partial<ColorVariant> & { name: string }):
   };
 }
 
+function variantKey(colorName: string, size: string): string {
+  return `${colorName}::${size}`;
+}
+
+// Estoque usado quando uma peça nunca passou pelo cadastro de variações
+// (peça antiga, ou nova salva sem clicar em "Gerar variações"). O objetivo
+// é nunca travar uma venda por causa de um dado que simplesmente ainda não
+// foi preenchido — assim que a administradora gerar e salvar as variações
+// de verdade, esse valor deixa de ser usado.
+const DEFAULT_LEGACY_STOCK = 99;
+
+export function normalizeVariant(
+  variant: Partial<ProductVariant> & { colorName?: unknown; size?: unknown }
+): ProductVariant {
+  const colorName = typeof variant.colorName === "string" ? variant.colorName : "";
+  const size = typeof variant.size === "string" ? variant.size : "";
+  const stock =
+    typeof variant.stock === "number" && Number.isFinite(variant.stock) && variant.stock >= 0
+      ? Math.floor(variant.stock)
+      : 0;
+
+  return {
+    id: typeof variant.id === "string" && variant.id ? variant.id : variantKey(colorName, size),
+    colorName,
+    size,
+    stock,
+    price: typeof variant.price === "number" ? variant.price : null,
+    active: variant.active !== false,
+  };
+}
+
+function generateVariants(colors: ColorVariant[], sizes: string[], stock: number): ProductVariant[] {
+  const colorNames = colors.length > 0 ? colors.map((c) => c.name) : [""];
+  const sizeList = sizes.length > 0 ? sizes : [""];
+  const variants: ProductVariant[] = [];
+  for (const colorName of colorNames) {
+    for (const size of sizeList) {
+      variants.push({ id: variantKey(colorName, size), colorName, size, stock, price: null, active: true });
+    }
+  }
+  return variants;
+}
+
 export function normalizeProduct(product: Product): Product {
   const colors = Array.isArray(product.colors) ? product.colors.map(normalizeColor) : [];
   const images =
     Array.isArray(product.images) && product.images.length > 0
       ? product.images
       : colors.find((c) => c.images.length > 0)?.images ?? [];
+  const sizes = Array.isArray(product.sizes) ? product.sizes : [];
+  const variants =
+    Array.isArray(product.variants) && product.variants.length > 0
+      ? product.variants.map(normalizeVariant)
+      : generateVariants(colors, sizes, DEFAULT_LEGACY_STOCK);
 
-  return { ...product, images, colors };
+  return { ...product, images, colors, sizes, variants };
 }
 
 // Catálogo inicial — usado apenas até a primeira gravação feita pelo painel
@@ -69,6 +117,7 @@ const SEED_PRODUCTS: Product[] = [
         ],
       },
     ],
+    variants: [],
   },
   {
     id: "macaquinho-canelado-pink",
@@ -91,6 +140,7 @@ const SEED_PRODUCTS: Product[] = [
         ],
       },
     ],
+    variants: [],
     isDraft: true,
   },
   {
@@ -114,6 +164,7 @@ const SEED_PRODUCTS: Product[] = [
         ],
       },
     ],
+    variants: [],
     isDraft: true,
   },
   {
@@ -134,6 +185,7 @@ const SEED_PRODUCTS: Product[] = [
         images: ["/products/conjunto-fitness-preto-1.jpg"],
       },
     ],
+    variants: [],
     isDraft: true,
   },
   {
@@ -157,6 +209,7 @@ const SEED_PRODUCTS: Product[] = [
         ],
       },
     ],
+    variants: [],
     isDraft: true,
   },
 ];
@@ -302,4 +355,30 @@ export async function getProductBySlug(slug: string): Promise<Product | undefine
 export async function getCategories(): Promise<string[]> {
   const products = await getProducts();
   return Array.from(new Set(products.map((p) => p.category)));
+}
+
+/**
+ * Baixa o estoque das variações compradas em um pedido. Só mexe em peças
+ * que já têm variações configuradas explicitamente (`variants` salvo e não
+ * vazio) — uma peça que nunca passou pelo cadastro de estoque não tem o que
+ * baixar, e isso é esperado (ver `normalizeProduct`).
+ */
+export async function decrementStockForOrder(
+  items: { productId: string; color: string; size: string; qty: number }[]
+): Promise<void> {
+  await mutateProducts((current) =>
+    current.map((p) => {
+      if (!Array.isArray(p.variants) || p.variants.length === 0) return p;
+      const relevant = items.filter((i) => i.productId === p.id);
+      if (relevant.length === 0) return p;
+
+      return {
+        ...p,
+        variants: p.variants.map((v) => {
+          const match = relevant.find((i) => i.color === v.colorName && i.size === v.size);
+          return match ? { ...v, stock: Math.max(0, v.stock - match.qty) } : v;
+        }),
+      };
+    })
+  );
 }
