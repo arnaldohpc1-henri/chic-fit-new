@@ -4,7 +4,8 @@ import Link from "next/link";
 /**
  * Banner de imagem única (arte pronta, sem texto sobreposto). Usa
  * width/height intrínsecos em vez de `fill` para nunca cortar a arte —
- * a imagem sempre escala mantendo a proporção original.
+ * a imagem sempre escala mantendo a proporção original, em qualquer
+ * largura de tela.
  */
 export function ImageBanner({
   src,
@@ -13,6 +14,8 @@ export function ImageBanner({
   width,
   height,
   priority = false,
+  rounded = true,
+  sizes = "(min-width: 1152px) 1152px, 100vw",
   className = "",
 }: {
   src: string;
@@ -21,6 +24,9 @@ export function ImageBanner({
   width: number;
   height: number;
   priority?: boolean;
+  /** false = banner de largura cheia (hero), sem cantos arredondados */
+  rounded?: boolean;
+  sizes?: string;
   className?: string;
 }) {
   const image = (
@@ -30,12 +36,12 @@ export function ImageBanner({
       width={width}
       height={height}
       priority={priority}
-      sizes="(min-width: 1152px) 1152px, 100vw"
+      sizes={sizes}
       className="h-auto w-full"
     />
   );
 
-  const wrapperClassName = `overflow-hidden rounded-2xl ${className}`;
+  const wrapperClassName = `overflow-hidden ${rounded ? "rounded-2xl" : ""} ${className}`;
 
   if (href) {
     return (

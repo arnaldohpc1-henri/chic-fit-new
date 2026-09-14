@@ -21,13 +21,15 @@ export default async function Home() {
         />
       </section>
 
-      <section className="mx-auto max-w-6xl px-5 py-8">
+      <section className="mx-auto my-8 max-w-[1920px]">
         <ImageBanner
           src="/banners/capa-colecao.jpg"
           alt="Disciplina também é autoamor — conheça a coleção"
           href="/loja"
           width={4269}
           height={2400}
+          rounded={false}
+          sizes="100vw"
         />
       </section>
 
