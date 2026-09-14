@@ -1,5 +1,5 @@
 import { ProductCard } from "@/components/ProductCard";
-import { ActiveFilterChips, ShopFilters, SortSelect } from "@/components/shop/ShopFilters";
+import { ActiveFilterChips, FilterSidebar, MobileFilterButton, SortSelect } from "@/components/shop/ShopFilters";
 import { getProducts } from "@/lib/products";
 import {
   collectCategories,
@@ -59,17 +59,15 @@ export default async function LojaPage({
       </div>
 
       <div className="mb-6 flex gap-3 lg:hidden">
-        <ShopFilters categories={categories} sizes={sizes} colors={colors} priceBounds={priceBounds} />
-        <SortSelect />
+        <MobileFilterButton categories={categories} sizes={sizes} colors={colors} priceBounds={priceBounds} />
+        <SortSelect className="flex-1" />
       </div>
 
       <div className="lg:grid lg:grid-cols-[220px_1fr] lg:gap-10">
-        <div className="hidden lg:block">
-          <ShopFilters categories={categories} sizes={sizes} colors={colors} priceBounds={priceBounds} />
-        </div>
+        <FilterSidebar categories={categories} sizes={sizes} colors={colors} priceBounds={priceBounds} />
 
         <div>
-          <div className="mb-6 hidden items-center justify-between lg:flex">
+          <div className="mb-6 flex items-center justify-between gap-3">
             <p className="text-sm text-muted">
               {filtered.length === 0
                 ? "Nenhum produto encontrado"
@@ -77,16 +75,8 @@ export default async function LojaPage({
                     filtered.length === 1 ? "" : "s"
                   }`}
             </p>
-            <SortSelect />
+            <SortSelect className="hidden lg:block" />
           </div>
-
-          <p className="mb-4 text-sm text-muted lg:hidden">
-            {filtered.length === 0
-              ? "Nenhum produto encontrado"
-              : `${filtered.length} produto${filtered.length === 1 ? "" : "s"} encontrado${
-                  filtered.length === 1 ? "" : "s"
-                }`}
-          </p>
 
           <ActiveFilterChips colors={colors} />
 

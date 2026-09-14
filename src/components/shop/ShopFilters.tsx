@@ -244,7 +244,7 @@ function FilterGroups({
       {colors.length > 0 && (
         <div>
           <p className="mb-2 text-xs uppercase tracking-wide text-muted">Cor</p>
-          <div className="flex flex-wrap gap-2.5">
+          <div className="flex flex-wrap gap-3">
             {colors.map((c) => {
               const active = selectedColors.includes(c.name);
               return (
@@ -256,10 +256,10 @@ function FilterGroups({
                   aria-pressed={active}
                   onClick={() => onToggleColor(c.name)}
                   style={{ backgroundColor: c.hex }}
-                  className={`h-7 w-7 rounded-full border transition ${
+                  className={`h-7 w-7 rounded-full border shadow-sm transition ${
                     active
                       ? "border-accent ring-2 ring-accent ring-offset-2 ring-offset-background"
-                      : "border-border/60"
+                      : "border-foreground/20 hover:ring-2 hover:ring-border hover:ring-offset-2 hover:ring-offset-background"
                   }`}
                 />
               );
@@ -278,18 +278,72 @@ function FilterGroups({
   );
 }
 
-export function ShopFilters({ categories, sizes, colors, priceBounds }: Props) {
-  const {
-    selectedCategories,
-    selectedSizes,
-    selectedColors,
-    priceMinParam,
-    priceMaxParam,
-    apply,
-    applyAll,
-    clearAll,
-  } = useFilterState();
-  const [mobileOpen, setMobileOpen] = useState(false);
+/**
+ * Sidebar de filtros do desktop. Único ponto do DOM que renderiza
+ * `FilterGroups` no layout de coluna lateral — o gatilho mobile
+ * (`MobileFilterButton`) é um componente separado para não duplicar essa
+ * árvore inteira (checkboxes, swatches, slider) quando só uma das duas
+ * versões é visível de cada vez.
+ */
+export function FilterSidebar({ categories, sizes, colors, priceBounds }: Props) {
+  const { selectedCategories, selectedSizes, selectedColors, priceMinParam, priceMaxParam, apply, clearAll } =
+    useFilterState();
+
+  const priceMin = priceMinParam ? Number(priceMinParam) : priceBounds.min;
+  const priceMax = priceMaxParam ? Number(priceMaxParam) : priceBounds.max;
+
+  const hasActiveFilters =
+    selectedCategories.length > 0 ||
+    selectedSizes.length > 0 ||
+    selectedColors.length > 0 ||
+    priceMinParam !== null ||
+    priceMaxParam !== null;
+
+  return (
+    <aside className="hidden lg:block">
+      <div className="sticky top-24">
+        <div className="mb-4 flex items-center justify-between">
+          <p className="text-xs uppercase tracking-[0.2em] text-accent">Filtros</p>
+          {hasActiveFilters && (
+            <button type="button" onClick={clearAll} className="text-xs text-muted hover:text-accent">
+              Limpar
+            </button>
+          )}
+        </div>
+        <FilterGroups
+          categories={categories}
+          sizes={sizes}
+          colors={colors}
+          priceBounds={priceBounds}
+          selectedCategories={selectedCategories}
+          selectedSizes={selectedSizes}
+          selectedColors={selectedColors}
+          priceMin={priceMin}
+          priceMax={priceMax}
+          onToggleCategory={(c) => apply({ categoria: toggleValue(selectedCategories, c) })}
+          onToggleSize={(s) => apply({ tamanho: toggleValue(selectedSizes, s) })}
+          onToggleColor={(c) => apply({ cor: toggleValue(selectedColors, c) })}
+          onPriceCommit={(min, max) =>
+            apply({
+              precoMin: min > priceBounds.min ? String(min) : null,
+              precoMax: max < priceBounds.max ? String(max) : null,
+            })
+          }
+        />
+      </div>
+    </aside>
+  );
+}
+
+/**
+ * Botão "Filtrar" do celular + o drawer que ele abre. Único ponto do DOM
+ * que monta o painel mobile — não existe uma segunda cópia escondida via
+ * CSS em algum outro lugar da página.
+ */
+export function MobileFilterButton({ categories, sizes, colors, priceBounds }: Props) {
+  const { selectedCategories, selectedSizes, selectedColors, priceMinParam, priceMaxParam, applyAll, clearAll } =
+    useFilterState();
+  const [open, setOpen] = useState(false);
 
   const priceMin = priceMinParam ? Number(priceMinParam) : priceBounds.min;
   const priceMax = priceMaxParam ? Number(priceMaxParam) : priceBounds.max;
@@ -303,51 +357,16 @@ export function ShopFilters({ categories, sizes, colors, priceBounds }: Props) {
 
   return (
     <>
-      {/* Desktop */}
-      <aside className="hidden lg:block">
-        <div className="sticky top-24">
-          <div className="mb-4 flex items-center justify-between">
-            <p className="text-xs uppercase tracking-[0.2em] text-accent">Filtros</p>
-            {hasActiveFilters && (
-              <button type="button" onClick={clearAll} className="text-xs text-muted hover:text-accent">
-                Limpar
-              </button>
-            )}
-          </div>
-          <FilterGroups
-            categories={categories}
-            sizes={sizes}
-            colors={colors}
-            priceBounds={priceBounds}
-            selectedCategories={selectedCategories}
-            selectedSizes={selectedSizes}
-            selectedColors={selectedColors}
-            priceMin={priceMin}
-            priceMax={priceMax}
-            onToggleCategory={(c) => apply({ categoria: toggleValue(selectedCategories, c) })}
-            onToggleSize={(s) => apply({ tamanho: toggleValue(selectedSizes, s) })}
-            onToggleColor={(c) => apply({ cor: toggleValue(selectedColors, c) })}
-            onPriceCommit={(min, max) =>
-              apply({
-                precoMin: min > priceBounds.min ? String(min) : null,
-                precoMax: max < priceBounds.max ? String(max) : null,
-              })
-            }
-          />
-        </div>
-      </aside>
-
-      {/* Mobile trigger */}
       <button
         type="button"
-        onClick={() => setMobileOpen(true)}
-        className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full border border-border px-5 text-sm uppercase tracking-wide hover:border-accent lg:hidden"
+        onClick={() => setOpen(true)}
+        className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-full border border-border px-5 text-sm uppercase tracking-wide hover:border-accent"
       >
         Filtrar
         {hasActiveFilters && <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
       </button>
 
-      {mobileOpen && (
+      {open && (
         <MobileDrawer
           categories={categories}
           sizes={sizes}
@@ -362,13 +381,13 @@ export function ShopFilters({ categories, sizes, colors, priceBounds }: Props) {
           }}
           onApply={(state) => {
             applyAll(state, priceBounds);
-            setMobileOpen(false);
+            setOpen(false);
           }}
           onClear={() => {
             clearAll();
-            setMobileOpen(false);
+            setOpen(false);
           }}
-          onClose={() => setMobileOpen(false)}
+          onClose={() => setOpen(false)}
         />
       )}
     </>
@@ -399,7 +418,7 @@ function MobileDrawer({
   if (typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex flex-col justify-end lg:hidden">
+    <div className="fixed inset-0 z-50 flex flex-col justify-end">
       <button
         type="button"
         aria-label="Fechar filtros"
@@ -494,7 +513,7 @@ export function ActiveFilterChips({ colors }: { colors: ColorOption[] }) {
           <Chip key={`color-${name}`} onRemove={() => apply({ cor: toggleValue(selectedColors, name) })}>
             <span
               title={name}
-              className="inline-block h-3.5 w-3.5 rounded-full border border-border/60"
+              className="inline-block h-3.5 w-3.5 rounded-full border border-foreground/20"
               style={{ backgroundColor: hex }}
             />
           </Chip>
@@ -533,7 +552,7 @@ const SORT_LABELS: Record<string, string> = {
   "maior-preco": "Maior preço",
 };
 
-export function SortSelect() {
+export function SortSelect({ className = "" }: { className?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -552,7 +571,7 @@ export function SortSelect() {
       value={current}
       onChange={(e) => handleChange(e.target.value)}
       aria-label="Ordenar por"
-      className="min-h-11 flex-1 cursor-pointer rounded-full border border-border bg-background px-5 text-sm uppercase tracking-wide outline-none hover:border-accent focus:border-accent lg:flex-none"
+      className={`min-h-11 cursor-pointer rounded-full border border-border bg-background px-5 text-sm uppercase tracking-wide outline-none hover:border-accent focus:border-accent ${className}`}
     >
       {Object.entries(SORT_LABELS).map(([value, label]) => (
         <option key={value || "padrao"} value={value}>
