@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { ImageBanner } from "@/components/ImageBanner";
 import { ProductCard } from "@/components/ProductCard";
 import { getProducts } from "@/lib/products";
 import { siteConfig } from "@/config/site";
@@ -11,12 +12,22 @@ export default async function Home() {
 
   return (
     <div>
+      <section className="mx-auto max-w-6xl px-5 pt-8">
+        <ImageBanner
+          src="/banners/site-no-ar.jpg"
+          alt="Nosso site está no ar — aproveite para garantir seus looks favoritos"
+          href="/loja"
+          width={4269}
+          height={2400}
+          priority
+        />
+      </section>
+
       <section className="relative flex min-h-[80vh] items-end overflow-hidden bg-foreground text-white sm:min-h-[90vh]">
         <Image
           src="/products/macaquinho-canelado-chumbo-1.jpg"
           alt="Modelo vestindo macaquinho canelado Chic & Fit"
           fill
-          priority
           className="object-cover object-top opacity-90"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/20" />
@@ -67,6 +78,16 @@ export default async function Home() {
         </div>
       </section>
 
+      <section className="mx-auto max-w-6xl px-5 pb-16">
+        <ImageBanner
+          src="/banners/capa-colecao.jpg"
+          alt="Disciplina também é autoamor — conheça a coleção"
+          href="/loja"
+          width={4269}
+          height={2400}
+        />
+      </section>
+
       <section className="bg-card py-16">
         <div className="mx-auto grid max-w-6xl gap-8 px-5 sm:grid-cols-3">
           {[
@@ -89,6 +110,32 @@ export default async function Home() {
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-5 py-16">
+        <div className="grid gap-6 sm:grid-cols-2">
+          <ImageBanner
+            src="/banners/parcelamento-facilitado.jpg"
+            alt="Parcelamento facilitado em até 3x sem juros no cartão"
+            width={4269}
+            height={2400}
+          />
+          <ImageBanner
+            src="/banners/cupom-desconto.jpg"
+            alt="Cupom de desconto — use o cupom PRIMEIRACOMPRA e ganhe 10% off em todo o site"
+            width={4269}
+            height={2400}
+          />
+        </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-5 pb-16">
+        <ImageBanner
+          src="/banners/envio-todo-brasil.jpg"
+          alt="Compra segura, envio para todo o Brasil e atendimento personalizado"
+          width={4269}
+          height={2400}
+        />
       </section>
     </div>
   );
