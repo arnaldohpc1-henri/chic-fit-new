@@ -1,6 +1,15 @@
 import { ProductCard } from "@/components/ProductCard";
-import { getCategories, getProducts } from "@/lib/products";
-import Link from "next/link";
+import { ActiveFilterChips, ShopFilters, SortSelect } from "@/components/shop/ShopFilters";
+import { getProducts } from "@/lib/products";
+import {
+  collectCategories,
+  collectColors,
+  collectPriceBounds,
+  collectSizes,
+  parseFilters,
+  productMatchesFilters,
+  sortProducts,
+} from "@/lib/product-filters";
 
 export const dynamic = "force-dynamic";
 
@@ -11,75 +20,87 @@ export const metadata = {
 export default async function LojaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ categoria?: string; busca?: string }>;
+  searchParams: Promise<{
+    categoria?: string;
+    tamanho?: string;
+    cor?: string;
+    precoMin?: string;
+    precoMax?: string;
+    ordenar?: string;
+    busca?: string;
+  }>;
 }) {
-  const { categoria, busca } = await searchParams;
+  const params = await searchParams;
   const products = await getProducts();
-  const categories = await getCategories();
+  const filters = parseFilters(params);
 
-  let filtered = categoria
-    ? products.filter((p) => p.category === categoria)
-    : products;
+  const categories = collectCategories(products);
+  const sizes = collectSizes(products);
+  const colors = collectColors(products);
+  const priceBounds = collectPriceBounds(products);
 
-  if (busca) {
-    const term = busca.trim().toLowerCase();
-    filtered = filtered.filter(
-      (p) =>
-        p.name.toLowerCase().includes(term) ||
-        p.category.toLowerCase().includes(term) ||
-        p.colors.some((c) => c.name.toLowerCase().includes(term))
-    );
-  }
+  const filtered = sortProducts(
+    products.filter((p) => productMatchesFilters(p, filters)),
+    filters.sort
+  );
 
   return (
     <div className="mx-auto max-w-6xl px-5 py-12">
-      <div className="mb-10">
+      <div className="mb-8">
         <p className="text-xs uppercase tracking-[0.3em] text-accent">
           Todas as peças
         </p>
         <h1 className="mt-2 font-display text-4xl">Loja</h1>
-        {busca && (
+        {filters.search && (
           <p className="mt-2 text-sm text-muted">
-            Resultados para &quot;{busca}&quot;
+            Resultados para &quot;{filters.search}&quot;
           </p>
         )}
       </div>
 
-      <div className="mb-8 flex flex-wrap gap-2">
-        <Link
-          href="/loja"
-          className={`rounded-full border px-4 py-1.5 text-sm transition ${
-            !categoria
-              ? "border-foreground bg-foreground text-white"
-              : "border-border text-muted hover:border-accent hover:text-accent"
-          }`}
-        >
-          Todas
-        </Link>
-        {categories.map((cat) => (
-          <Link
-            key={cat}
-            href={`/loja?categoria=${encodeURIComponent(cat)}`}
-            className={`rounded-full border px-4 py-1.5 text-sm transition ${
-              categoria === cat
-                ? "border-foreground bg-foreground text-white"
-                : "border-border text-muted hover:border-accent hover:text-accent"
-            }`}
-          >
-            {cat}
-          </Link>
-        ))}
+      <div className="mb-6 flex gap-3 lg:hidden">
+        <ShopFilters categories={categories} sizes={sizes} colors={colors} priceBounds={priceBounds} />
+        <SortSelect />
       </div>
 
-      {filtered.length === 0 ? (
-        <p className="text-muted">Nenhuma peça encontrada.</p>
-      ) : (
-        <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
-          {filtered.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
+      <div className="lg:grid lg:grid-cols-[220px_1fr] lg:gap-10">
+        <div className="hidden lg:block">
+          <ShopFilters categories={categories} sizes={sizes} colors={colors} priceBounds={priceBounds} />
         </div>
-      )}
+
+        <div>
+          <div className="mb-6 hidden items-center justify-between lg:flex">
+            <p className="text-sm text-muted">
+              {filtered.length === 0
+                ? "Nenhum produto encontrado"
+                : `${filtered.length} produto${filtered.length === 1 ? "" : "s"} encontrado${
+                    filtered.length === 1 ? "" : "s"
+                  }`}
+            </p>
+            <SortSelect />
+          </div>
+
+          <p className="mb-4 text-sm text-muted lg:hidden">
+            {filtered.length === 0
+              ? "Nenhum produto encontrado"
+              : `${filtered.length} produto${filtered.length === 1 ? "" : "s"} encontrado${
+                  filtered.length === 1 ? "" : "s"
+                }`}
+          </p>
+
+          <ActiveFilterChips colors={colors} />
+
+          {filtered.length === 0 ? (
+            <p className="text-muted">Não encontramos produtos com esses filtros.</p>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-3">
+              {filtered.map((product) => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
