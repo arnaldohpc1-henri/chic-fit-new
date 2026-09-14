@@ -1,9 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ImageBanner } from "@/components/ImageBanner";
 import { ProductCard } from "@/components/ProductCard";
 import { getProducts } from "@/lib/products";
-import { siteConfig } from "@/config/site";
 
 export const dynamic = "force-dynamic";
 
@@ -23,29 +21,14 @@ export default async function Home() {
         />
       </section>
 
-      <section className="relative flex min-h-[80vh] items-end overflow-hidden bg-foreground text-white sm:min-h-[90vh]">
-        <Image
-          src="/products/macaquinho-canelado-chumbo-1.jpg"
-          alt="Modelo vestindo macaquinho canelado Chic & Fit"
-          fill
-          className="object-cover object-top opacity-90"
+      <section className="mx-auto max-w-6xl px-5 py-8">
+        <ImageBanner
+          src="/banners/capa-colecao.jpg"
+          alt="Disciplina também é autoamor — conheça a coleção"
+          href="/loja"
+          width={4269}
+          height={2400}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-black/20" />
-        <div className="relative mx-auto w-full max-w-6xl px-5 pb-16 pt-32">
-          <p className="text-xs uppercase tracking-[0.3em] text-white/80">
-            Nova coleção
-          </p>
-          <h1 className="mt-4 max-w-lg font-display text-5xl leading-[1.05] sm:text-6xl">
-            {siteConfig.tagline}
-          </h1>
-          <p className="mt-4 max-w-md text-white/85">{siteConfig.description}</p>
-          <Link
-            href="/loja"
-            className="mt-8 inline-block rounded-full bg-white px-8 py-3 text-sm font-medium uppercase tracking-wide text-foreground transition hover:bg-accent hover:text-white"
-          >
-            Ver coleção
-          </Link>
-        </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-5 py-16">
