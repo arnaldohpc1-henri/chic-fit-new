@@ -16,11 +16,11 @@ const SWIPE_THRESHOLD = 50;
 const DRAG_INTENT_THRESHOLD = 8;
 
 /**
- * Carrossel de largura cheia para as artes da Home. Cada slide usa
- * dimensões intrínsecas (nunca `fill`/`object-fit: cover`), então a
- * proporção original de cada arte é sempre preservada — se um slide algum
- * dia tiver uma proporção diferente dos demais, ele só fica um pouco mais
- * baixo/alto, nunca distorcido.
+ * Carrossel de largura cheia para as artes da Home. A altura do container
+ * acompanha a proporção real do slide ATIVO (via `aspect-ratio`, animado
+ * suavemente entre slides de proporções diferentes) e cada imagem usa
+ * `object-contain` — nunca corta, só "sobra" um respiro transparente nos
+ * raros instantes de transição entre artes de proporções bem diferentes.
  */
 export function Carousel({
   slides,
@@ -119,8 +119,8 @@ export function Carousel({
 
   return (
     <div
-      className="relative w-full select-none overflow-hidden"
-      style={{ touchAction: "pan-y" }}
+      className="relative w-full select-none overflow-hidden transition-[aspect-ratio] duration-500 ease-out sm:mx-auto sm:h-[min(72vh,640px)] sm:w-auto"
+      style={{ touchAction: "pan-y", aspectRatio: `${slides[index].width} / ${slides[index].height}` }}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
@@ -128,7 +128,7 @@ export function Carousel({
       onMouseLeave={startAutoplay}
     >
       <div
-        className={`flex ${isDragging ? "" : "transition-transform duration-500 ease-out"}`}
+        className={`flex h-full ${isDragging ? "" : "transition-transform duration-500 ease-out"}`}
         style={{ transform: `translateX(calc(-${index * 100}% + ${dragOffset}px))` }}
       >
         {slides.map((slide, i) => {
@@ -136,19 +136,18 @@ export function Carousel({
             <Image
               src={slide.src}
               alt={slide.alt}
-              width={slide.width}
-              height={slide.height}
+              fill
               priority={i === 0}
               sizes="100vw"
               draggable={false}
-              className="h-auto w-full"
+              className="object-contain"
             />
           );
 
           return (
-            <div key={slide.src} className="w-full shrink-0">
+            <div key={slide.src} className="relative h-full w-full shrink-0">
               {slide.href ? (
-                <Link href={slide.href} className="block" onClickCapture={handleSlideClick}>
+                <Link href={slide.href} className="block h-full w-full" onClickCapture={handleSlideClick}>
                   {image}
                 </Link>
               ) : (

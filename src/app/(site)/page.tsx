@@ -7,18 +7,17 @@ export const dynamic = "force-dynamic";
 
 const HOME_CAROUSEL_SLIDES: CarouselSlide[] = [
   {
-    src: "/banners/site-no-ar.jpg",
-    alt: "Nosso site está no ar — aproveite para garantir seus looks favoritos",
-    href: "/loja",
-    width: 4269,
-    height: 2400,
+    src: "/banners/sofisticada.jpg",
+    alt: "Sofisticada e feminina — nova coleção Chic & Fit",
+    width: 3375,
+    height: 4219,
   },
   {
-    src: "/banners/capa-colecao.jpg",
-    alt: "Disciplina também é autoamor — conheça a coleção",
+    src: "/banners/colecao-elegance.jpg",
+    alt: "Coleção Elegance",
     href: "/loja",
-    width: 4269,
-    height: 2400,
+    width: 3375,
+    height: 4219,
   },
   {
     src: "/banners/parcelamento-facilitado.jpg",
@@ -27,16 +26,17 @@ const HOME_CAROUSEL_SLIDES: CarouselSlide[] = [
     height: 2400,
   },
   {
-    src: "/banners/cupom-desconto.jpg",
-    alt: "Cupom de desconto — use o cupom PRIMEIRACOMPRA e ganhe 10% off em todo o site",
-    width: 4269,
-    height: 2400,
+    src: "/banners/cupom.jpg",
+    alt: "10% off na primeira compra com o cupom CHIC10",
+    width: 3375,
+    height: 4219,
   },
   {
-    src: "/banners/envio-todo-brasil.jpg",
-    alt: "Compra segura, envio para todo o Brasil e atendimento personalizado",
-    width: 4269,
-    height: 2400,
+    src: "/banners/frete.jpg",
+    alt: "Frete grátis para Igarapé do Meio-MA — compre agora",
+    href: "/loja",
+    width: 3375,
+    height: 4219,
   },
 ];
 
