@@ -92,9 +92,21 @@ export function productMatchesFilters(product: Product, filters: ParsedFilters):
 export function sortProducts(products: Product[], sort: SortOption | null): Product[] {
   if (sort === null) return products;
   if (sort === "recentes") {
-    // Sem campo de data no catálogo — a ordem de inserção no array já
-    // reflete quem foi cadastrado por último (ver mutateProducts).
-    return [...products].reverse();
+    // Usa o campo real `createdAt` (gravado na criação — ver POST
+    // /api/admin/products), nunca a posição no array. Peças cadastradas
+    // antes desse campo existir não têm data conhecida: `Array.sort` é
+    // estável, então elas ficam depois das datadas, mantendo a ordem
+    // relativa entre si (sem inventar uma data para preencher a lacuna).
+    return [...products].sort((a, b) => {
+      const aTime = a.createdAt ? Date.parse(a.createdAt) : NaN;
+      const bTime = b.createdAt ? Date.parse(b.createdAt) : NaN;
+      const aKnown = !Number.isNaN(aTime);
+      const bKnown = !Number.isNaN(bTime);
+      if (!aKnown && !bKnown) return 0;
+      if (!aKnown) return 1;
+      if (!bKnown) return -1;
+      return bTime - aTime;
+    });
   }
   if (sort === "menor-preco") {
     return [...products].sort((a, b) => {

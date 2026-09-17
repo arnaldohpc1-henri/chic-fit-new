@@ -33,4 +33,6 @@ export type Product = {
   variants: ProductVariant[];
   /** true = peça já exposta na vitrine mas aguardando preço/descrição final */
   isDraft?: boolean;
+  /** ISO 8601, gravado no momento da criação (ver POST /api/admin/products) — ausente em peças cadastradas antes deste campo existir, nunca preenchido retroativamente */
+  createdAt?: string;
 };

@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
         images: Array.isArray(body.images) ? body.images : [],
         colors: body.colors.map(normalizeColor),
         variants: Array.isArray(body.variants) ? body.variants.map(normalizeVariant) : [],
+        createdAt: new Date().toISOString(),
       };
 
       return [...current, created];
