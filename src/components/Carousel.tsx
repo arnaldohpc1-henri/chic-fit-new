@@ -5,11 +5,16 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 export type CarouselSlide = {
+  /** imagem exibida abaixo do breakpoint `sm` (mobile) */
   src: string;
   alt: string;
   href?: string;
   width: number;
   height: number;
+  /** opcional: imagem específica para `sm` (640px) e acima; sem ela, reaproveita `src` */
+  desktopSrc?: string;
+  desktopWidth?: number;
+  desktopHeight?: number;
 };
 
 const SWIPE_THRESHOLD = 50;
@@ -17,10 +22,12 @@ const DRAG_INTENT_THRESHOLD = 8;
 
 /**
  * Carrossel de largura cheia para as artes da Home. A altura do container
- * acompanha a proporção real do slide ATIVO (via `aspect-ratio`, animado
- * suavemente entre slides de proporções diferentes) e cada imagem usa
- * `object-contain` — nunca corta, só "sobra" um respiro transparente nos
- * raros instantes de transição entre artes de proporções bem diferentes.
+ * acompanha a proporção real do slide ATIVO — via duas variáveis CSS
+ * (--mobile-ar e --desktop-ar, animadas suavemente entre slides) lidas por
+ * uma media query própria (ver a tag style dentro do componente), já que um
+ * style inline sempre venceria uma classe responsiva do Tailwind na
+ * cascata. Mobile e desktop podem exibir arquivos de imagem diferentes por
+ * slide (ver desktopSrc); cada imagem usa object-contain — nunca corta.
  */
 export function Carousel({
   slides,
@@ -119,39 +126,66 @@ export function Carousel({
 
   return (
     <div
-      className="relative w-full select-none overflow-hidden transition-[aspect-ratio] duration-500 ease-out sm:mx-auto sm:h-[min(72vh,640px)] sm:w-auto"
-      style={{ touchAction: "pan-y", aspectRatio: `${slides[index].width} / ${slides[index].height}` }}
+      className="carousel-viewport relative w-full select-none overflow-hidden transition-[aspect-ratio] duration-500 ease-out sm:mx-auto sm:w-auto sm:max-w-full sm:max-h-[min(72vh,640px)]"
+      style={
+        {
+          touchAction: "pan-y",
+          "--mobile-ar": `${slides[index].width} / ${slides[index].height}`,
+          "--desktop-ar": `${slides[index].desktopWidth ?? slides[index].width} / ${slides[index].desktopHeight ?? slides[index].height}`,
+        } as React.CSSProperties
+      }
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onMouseEnter={stopAutoplay}
       onMouseLeave={startAutoplay}
     >
+      {/* Uma media query de verdade alterna a proporção do container entre
+          mobile e desktop, lendo as variáveis definidas no style acima —
+          a classe utilitária de aspect-ratio do Tailwind não aceita bem um
+          valor arbitrário baseado em variável CSS aqui. */}
+      <style>{`
+        .carousel-viewport { aspect-ratio: var(--mobile-ar); }
+        @media (min-width: 640px) {
+          .carousel-viewport { aspect-ratio: var(--desktop-ar); }
+        }
+      `}</style>
       <div
         className={`flex h-full ${isDragging ? "" : "transition-transform duration-500 ease-out"}`}
         style={{ transform: `translateX(calc(-${index * 100}% + ${dragOffset}px))` }}
       >
         {slides.map((slide, i) => {
-          const image = (
-            <Image
-              src={slide.src}
-              alt={slide.alt}
-              fill
-              priority={i === 0}
-              sizes="100vw"
-              draggable={false}
-              className="object-contain"
-            />
+          const images = (
+            <>
+              <Image
+                src={slide.src}
+                alt={slide.alt}
+                fill
+                priority={i === 0}
+                sizes="100vw"
+                draggable={false}
+                className="object-contain sm:hidden"
+              />
+              <Image
+                src={slide.desktopSrc ?? slide.src}
+                alt={slide.alt}
+                fill
+                priority={i === 0}
+                sizes="100vw"
+                draggable={false}
+                className="hidden object-contain sm:block"
+              />
+            </>
           );
 
           return (
             <div key={slide.src} className="relative h-full w-full shrink-0">
               {slide.href ? (
                 <Link href={slide.href} className="block h-full w-full" onClickCapture={handleSlideClick}>
-                  {image}
+                  {images}
                 </Link>
               ) : (
-                image
+                images
               )}
             </div>
           );

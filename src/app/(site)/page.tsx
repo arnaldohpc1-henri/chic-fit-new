@@ -11,6 +11,9 @@ const HOME_CAROUSEL_SLIDES: CarouselSlide[] = [
     alt: "Sofisticada e feminina — nova coleção Chic & Fit",
     width: 3375,
     height: 4219,
+    desktopSrc: "/banners/sofisticada-desktop.jpg",
+    desktopWidth: 4269,
+    desktopHeight: 2400,
   },
   {
     src: "/banners/colecao-elegance.jpg",
@@ -18,6 +21,9 @@ const HOME_CAROUSEL_SLIDES: CarouselSlide[] = [
     href: "/loja",
     width: 3375,
     height: 4219,
+    desktopSrc: "/banners/colecao-elegance-desktop.jpg",
+    desktopWidth: 4269,
+    desktopHeight: 2400,
   },
   {
     src: "/banners/parcelamento-facilitado.jpg",
@@ -30,6 +36,9 @@ const HOME_CAROUSEL_SLIDES: CarouselSlide[] = [
     alt: "10% off na primeira compra com o cupom CHIC10",
     width: 3375,
     height: 4219,
+    desktopSrc: "/banners/cupom-desktop.jpg",
+    desktopWidth: 4269,
+    desktopHeight: 2400,
   },
   {
     src: "/banners/frete.jpg",
@@ -37,6 +46,9 @@ const HOME_CAROUSEL_SLIDES: CarouselSlide[] = [
     href: "/loja",
     width: 3375,
     height: 4219,
+    desktopSrc: "/banners/frete-desktop.jpg",
+    desktopWidth: 4269,
+    desktopHeight: 2400,
   },
 ];
 
