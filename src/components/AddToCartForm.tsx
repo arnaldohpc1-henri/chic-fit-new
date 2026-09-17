@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Product } from "@/lib/product-types";
 import { useCart } from "@/lib/cart-context";
-import { siteConfig } from "@/config/site";
+import { buildWhatsAppUrl, productInquiryMessage } from "@/lib/whatsapp";
+import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 
 export function AddToCartForm({
   product,
@@ -63,9 +64,9 @@ export function AddToCartForm({
           gente para saber preço, tamanhos e disponibilidade.
         </p>
         <a
-          href={`https://wa.me/${siteConfig.whatsappNumber}?text=${encodeURIComponent(
+          href={buildWhatsAppUrl(
             `Olá! Tenho interesse na peça "${product.name}${color ? ` - ${color}` : ""}" que vi no site.`
-          )}`}
+          )}
           target="_blank"
           rel="noreferrer"
           className="mt-4 inline-block rounded-full bg-foreground px-6 py-3 text-sm font-medium uppercase tracking-wide text-white transition hover:bg-accent"
@@ -85,6 +86,15 @@ export function AddToCartForm({
         <p className="mt-1 text-sm text-muted">
           Todas as combinações de cor e tamanho estão sem estoque no momento.
         </p>
+        <a
+          href={buildWhatsAppUrl(productInquiryMessage(product.name, color, null))}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 inline-flex items-center gap-2 text-sm text-muted underline-offset-2 hover:text-accent hover:underline"
+        >
+          <WhatsAppIcon className="h-4 w-4" />
+          Perguntar sobre disponibilidade no WhatsApp
+        </a>
       </div>
     );
   }
@@ -212,6 +222,16 @@ export function AddToCartForm({
           Comprar agora
         </button>
       </div>
+
+      <a
+        href={buildWhatsAppUrl(productInquiryMessage(product.name, color, size))}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex items-center gap-2 text-sm text-muted underline-offset-2 hover:text-accent hover:underline"
+      >
+        <WhatsAppIcon className="h-4 w-4" />
+        Tenho uma dúvida sobre este produto
+      </a>
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { Order } from "@/lib/order-types";
 import { formatPrice } from "@/lib/format";
-import { siteConfig } from "@/config/site";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
 export default function PedidoConfirmadoPage() {
   const { id } = useParams<{ id: string }>();
@@ -36,7 +36,7 @@ export default function PedidoConfirmadoPage() {
           enviar os detalhes pelo WhatsApp para a gente concluir com você.
         </p>
         <a
-          href={`https://wa.me/${siteConfig.whatsappNumber}`}
+          href={buildWhatsAppUrl()}
           target="_blank"
           rel="noreferrer"
           className="mt-8 inline-block rounded-full bg-[#25D366] px-8 py-3 text-sm font-medium uppercase tracking-wide text-white transition hover:opacity-90"
@@ -61,7 +61,7 @@ export default function PedidoConfirmadoPage() {
 
   const message = `Olá! Acabei de fazer o pedido *${order.id}* no site da Chic & Fit.\n\n${itemsText}\n\nSubtotal: ${formatPrice(order.subtotal)}\n\nEndereço: ${order.customer.address}, ${order.customer.number} - ${order.customer.neighborhood}, ${order.customer.city}/${order.customer.state} - CEP ${order.customer.zip}\n\nGostaria de combinar o pagamento e o frete.`;
 
-  const whatsappUrl = `https://wa.me/${siteConfig.whatsappNumber}?text=${encodeURIComponent(message)}`;
+  const whatsappUrl = buildWhatsAppUrl(message);
 
   return (
     <div className="mx-auto max-w-2xl px-5 py-16 text-center">

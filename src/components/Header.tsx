@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useCart } from "@/lib/cart-context";
 import { siteConfig } from "@/config/site";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
 const NAV_LINKS = [
   { href: "/", label: "Início" },
@@ -149,7 +150,7 @@ export function Header() {
               </Link>
             ))}
             <a
-              href={`https://wa.me/${siteConfig.whatsappNumber}`}
+              href={buildWhatsAppUrl()}
               target="_blank"
               rel="noreferrer"
               className="py-2 text-foreground/80 hover:text-accent"

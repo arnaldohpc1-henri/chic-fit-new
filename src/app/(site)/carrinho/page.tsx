@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useCart } from "@/lib/cart-context";
 import { formatPrice } from "@/lib/format";
 import { siteConfig } from "@/config/site";
+import { buildWhatsAppUrl, cartInquiryMessage } from "@/lib/whatsapp";
+import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 
 export default function CarrinhoPage() {
   const { items, removeItem, setQty, subtotal } = useCart();
@@ -126,6 +128,15 @@ export default function CarrinhoPage() {
         >
           Finalizar compra
         </Link>
+        <a
+          href={buildWhatsAppUrl(cartInquiryMessage(items, subtotal))}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-3 flex items-center justify-center gap-2 rounded-full border border-[#25D366] px-6 py-3 text-center text-sm font-medium uppercase tracking-wide text-[#25D366] transition hover:bg-[#25D366]/10"
+        >
+          <WhatsAppIcon className="h-4 w-4" />
+          Falar pelo WhatsApp
+        </a>
       </div>
     </div>
   );

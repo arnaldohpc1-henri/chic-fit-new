@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { siteConfig } from "@/config/site";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 
 export function Footer() {
   return (
@@ -35,7 +36,7 @@ export function Footer() {
           <ul className="space-y-2 text-muted">
             <li>
               <a
-                href={`https://wa.me/${siteConfig.whatsappNumber}`}
+                href={buildWhatsAppUrl()}
                 target="_blank"
                 rel="noreferrer"
                 className="hover:text-accent"
