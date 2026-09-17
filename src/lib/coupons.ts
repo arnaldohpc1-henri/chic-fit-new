@@ -1,4 +1,4 @@
-import { put, head, BlobPreconditionFailedError } from "@vercel/blob";
+import { put, head, BlobNotFoundError, BlobPreconditionFailedError } from "@vercel/blob";
 import type { Coupon } from "./coupon-types";
 import { normalizeCode } from "./coupon-rules";
 
@@ -64,10 +64,26 @@ async function fetchCatalogBody(url: string): Promise<Coupon[]> {
   return (await res.json()) as Coupon[];
 }
 
+/**
+ * Antes da primeira gravação feita pelo painel, "data/coupons.json" ainda
+ * não existe no Blob — head() lança BlobNotFoundError nesse caso, o que é
+ * diferente de uma falha transitória de leitura. Sem tratar isso à parte, a
+ * primeira gravação nunca conseguiria acontecer (o loop de retry ficaria
+ * tentando ler um arquivo que só passa a existir depois de um put() bem-
+ * sucedido). Aqui, "não existe ainda" começa do catálogo seed, sem ETag —
+ * o put() seguinte cria o arquivo pela primeira vez.
+ */
 async function readCatalogForMutation(): Promise<{ coupons: Coupon[]; etag?: string }> {
-  const info = await head(CATALOG_PATH);
-  const coupons = await fetchCatalogBody(info.url);
-  return { coupons, etag: info.etag };
+  try {
+    const info = await head(CATALOG_PATH);
+    const coupons = await fetchCatalogBody(info.url);
+    return { coupons, etag: info.etag };
+  } catch (err) {
+    if (err instanceof BlobNotFoundError) {
+      return { coupons: SEED_COUPONS, etag: undefined };
+    }
+    throw err;
+  }
 }
 
 export async function getCoupons(): Promise<Coupon[]> {
