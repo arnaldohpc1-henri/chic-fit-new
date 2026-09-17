@@ -59,7 +59,11 @@ export default function PedidoConfirmadoPage() {
     )
     .join("\n");
 
-  const message = `Olá! Acabei de fazer o pedido *${order.id}* no site da Chic & Fit.\n\n${itemsText}\n\nSubtotal: ${formatPrice(order.subtotal)}\n\nEndereço: ${order.customer.address}, ${order.customer.number} - ${order.customer.neighborhood}, ${order.customer.city}/${order.customer.state} - CEP ${order.customer.zip}\n\nGostaria de combinar o pagamento e o frete.`;
+  const discountLine = order.discountAmount
+    ? `\nDesconto (${order.couponCode}): -${formatPrice(order.discountAmount)}\nTotal: ${formatPrice(order.total)}`
+    : "";
+
+  const message = `Olá! Acabei de fazer o pedido *${order.id}* no site da Chic & Fit.\n\n${itemsText}\n\nSubtotal: ${formatPrice(order.subtotal)}${discountLine}\n\nEndereço: ${order.customer.address}, ${order.customer.number} - ${order.customer.neighborhood}, ${order.customer.city}/${order.customer.state} - CEP ${order.customer.zip}\n\nGostaria de combinar o pagamento e o frete.`;
 
   const whatsappUrl = buildWhatsAppUrl(message);
 
@@ -88,9 +92,19 @@ export default function PedidoConfirmadoPage() {
             </li>
           ))}
         </ul>
-        <div className="mt-4 flex justify-between border-t border-border pt-4 font-medium">
-          <span>Subtotal</span>
+        <div className="mt-4 flex justify-between border-t border-border pt-4">
+          <span className="text-muted">Subtotal</span>
           <span>{formatPrice(order.subtotal)}</span>
+        </div>
+        {order.discountAmount > 0 && (
+          <div className="mt-1 flex justify-between text-accent">
+            <span>Desconto ({order.couponCode})</span>
+            <span>-{formatPrice(order.discountAmount)}</span>
+          </div>
+        )}
+        <div className="mt-1 flex justify-between font-medium">
+          <span>Total</span>
+          <span>{formatPrice(order.total)}</span>
         </div>
       </div>
 

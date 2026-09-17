@@ -35,7 +35,7 @@ const EMPTY_FORM: FormState = {
 };
 
 export default function CheckoutPage() {
-  const { items, subtotal, clear } = useCart();
+  const { items, subtotal, coupon, total, clear } = useCart();
   const router = useRouter();
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
@@ -65,6 +65,7 @@ export default function CheckoutPage() {
             qty: i.qty,
           })),
           subtotal,
+          couponCode: coupon?.code ?? null,
         }),
       });
 
@@ -241,9 +242,19 @@ export default function CheckoutPage() {
               </li>
             ))}
           </ul>
-          <div className="mt-4 flex justify-between border-t border-border pt-4 font-medium">
-            <span>Subtotal</span>
+          <div className="mt-4 flex justify-between border-t border-border pt-4">
+            <span className="text-muted">Subtotal</span>
             <span>{formatPrice(subtotal)}</span>
+          </div>
+          {coupon && (
+            <div className="mt-1 flex justify-between text-accent">
+              <span>Desconto ({coupon.code})</span>
+              <span>-{formatPrice(coupon.discountAmount)}</span>
+            </div>
+          )}
+          <div className="mt-1 flex justify-between font-medium">
+            <span>Total</span>
+            <span>{formatPrice(total)}</span>
           </div>
           <p className="mt-1 text-xs text-muted">
             Frete combinado diretamente com a loja.

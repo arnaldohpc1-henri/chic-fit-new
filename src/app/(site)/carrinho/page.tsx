@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCart } from "@/lib/cart-context";
@@ -8,8 +9,61 @@ import { siteConfig } from "@/config/site";
 import { buildWhatsAppUrl, cartInquiryMessage } from "@/lib/whatsapp";
 import { WhatsAppIcon } from "@/components/icons/WhatsAppIcon";
 
+function CouponBox() {
+  const { coupon, couponLoading, couponMessage, applyCoupon, removeCoupon } = useCart();
+  const [code, setCode] = useState("");
+
+  if (coupon) {
+    return (
+      <div className="mb-4 flex items-center justify-between gap-2 rounded-xl border border-accent/40 bg-accent/5 px-4 py-2.5 text-sm">
+        <span>
+          🎟️ Cupom <span className="font-medium">{coupon.code}</span> aplicado!
+        </span>
+        <button
+          type="button"
+          onClick={removeCoupon}
+          className="shrink-0 text-xs text-muted underline-offset-2 hover:text-accent hover:underline"
+        >
+          Remover
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-4">
+      <p className="mb-2 text-xs uppercase tracking-wide text-muted">
+        🎟️ Cupom de desconto
+      </p>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          applyCoupon(code);
+        }}
+        className="flex gap-2"
+      >
+        <input
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="Digite seu cupom"
+          aria-label="Código do cupom"
+          className="min-h-11 flex-1 rounded-full border border-border bg-background px-4 text-sm uppercase outline-none focus:border-accent"
+        />
+        <button
+          type="submit"
+          disabled={couponLoading || !code.trim()}
+          className="min-h-11 shrink-0 rounded-full border border-foreground px-5 text-sm font-medium uppercase tracking-wide transition hover:border-accent hover:text-accent disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {couponLoading ? "..." : "Aplicar"}
+        </button>
+      </form>
+      {couponMessage && <p className="mt-2 text-sm text-accent">{couponMessage}</p>}
+    </div>
+  );
+}
+
 export default function CarrinhoPage() {
-  const { items, removeItem, setQty, subtotal } = useCart();
+  const { items, removeItem, setQty, subtotal, coupon, total } = useCart();
 
   if (items.length === 0) {
     return (
@@ -115,9 +169,22 @@ export default function CarrinhoPage() {
             Você ganhou frete grátis! 🎉
           </p>
         )}
-        <div className="flex items-center justify-between text-lg">
+
+        <CouponBox />
+
+        <div className="flex items-center justify-between text-sm text-muted">
           <span>Subtotal</span>
-          <span className="font-medium">{formatPrice(subtotal)}</span>
+          <span>{formatPrice(subtotal)}</span>
+        </div>
+        {coupon && (
+          <div className="mt-1 flex items-center justify-between text-sm text-accent">
+            <span>Desconto ({coupon.code})</span>
+            <span>-{formatPrice(coupon.discountAmount)}</span>
+          </div>
+        )}
+        <div className="mt-2 flex items-center justify-between border-t border-border pt-2 text-lg">
+          <span>Total</span>
+          <span className="font-medium">{formatPrice(total)}</span>
         </div>
         <p className="mt-1 text-xs text-muted">
           Frete e prazo de entrega calculados no checkout.
@@ -129,7 +196,7 @@ export default function CarrinhoPage() {
           Finalizar compra
         </Link>
         <a
-          href={buildWhatsAppUrl(cartInquiryMessage(items, subtotal))}
+          href={buildWhatsAppUrl(cartInquiryMessage(items, total))}
           target="_blank"
           rel="noreferrer"
           className="mt-3 flex items-center justify-center gap-2 rounded-full border border-[#25D366] px-6 py-3 text-center text-sm font-medium uppercase tracking-wide text-[#25D366] transition hover:bg-[#25D366]/10"
