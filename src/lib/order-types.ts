@@ -33,5 +33,14 @@ export type Order = {
   discountAmount: number;
   /** subtotal - discountAmount (frete não entra aqui, ver Prioridade 15 item 17) */
   total: number;
+  /**
+   * UF resolvida pelo PRÓPRIO SERVIDOR a partir de uma nova consulta ao CEP
+   * no momento da criação do pedido — nunca copiada de `customer.state`
+   * (que veio do navegador e não é confiável para decisões de frete).
+   * `null` quando o CEP não pôde ser verificado nesse momento (serviço
+   * indisponível ou CEP não encontrado); nenhuma lógica futura de frete
+   * deve assumir uma UF nesse caso. Ver Prioridade 12 Etapa 3.
+   */
+  verifiedState: string | null;
   status: "aguardando_pagamento";
 };

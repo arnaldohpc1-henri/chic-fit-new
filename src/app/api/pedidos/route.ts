@@ -4,6 +4,7 @@ import { decrementStockForOrder } from "@/lib/products";
 import { OrderItem } from "@/lib/order-types";
 import { getCouponByCode, incrementCouponUsage } from "@/lib/coupons";
 import { evaluateCoupon } from "@/lib/coupon-rules";
+import { lookupCep } from "@/lib/cep";
 
 type RequestBody = {
   customer: {
@@ -63,6 +64,16 @@ export async function POST(req: NextRequest) {
     discountAmount = result.discountAmount;
   }
 
+  // A UF confiável para decisões futuras de frete nunca vem de
+  // `customer.state` (digitado/preenchido no navegador) — o servidor faz a
+  // sua própria consulta ao CEP aqui, no momento da criação do pedido, e
+  // guarda o resultado à parte. Falha na consulta (CEP não encontrado ou
+  // serviço fora do ar) não impede o pedido de ser criado — só deixa
+  // `verifiedState` como null, e nenhuma lógica futura de frete deve tratar
+  // esse pedido como pertencente a um estado específico nesse caso.
+  const cepLookup = await lookupCep(zip);
+  const verifiedState = cepLookup.ok ? cepLookup.state : null;
+
   // NOTE: pagamento ainda não integrado a um gateway (Stripe/Mercado Pago) e
   // ainda não há banco de dados — createOrder tenta persistir em disco (só
   // funciona rodando localmente) mas o pedido retornado aqui não depende
@@ -77,6 +88,7 @@ export async function POST(req: NextRequest) {
     couponCode,
     discountAmount,
     total: subtotal - discountAmount,
+    verifiedState,
   });
 
   // Best-effort, mesmo padrão da baixa de estoque abaixo: se o cupom deixar

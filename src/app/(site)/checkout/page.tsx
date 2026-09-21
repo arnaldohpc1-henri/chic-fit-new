@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useCart } from "@/lib/cart-context";
 import { formatPrice } from "@/lib/format";
+import { formatCep, normalizeCep } from "@/lib/cep";
 
 type FormState = {
   name: string;
@@ -34,16 +35,77 @@ const EMPTY_FORM: FormState = {
   notes: "",
 };
 
+type CepStatus = "idle" | "loading" | "found" | "not_found" | "error";
+
 export default function CheckoutPage() {
   const { items, subtotal, coupon, total, clear } = useCart();
   const router = useRouter();
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cepStatus, setCepStatus] = useState<CepStatus>("idle");
+
+  // CEP (dígitos) que os campos de cidade/UF atuais realmente refletem —
+  // null enquanto não há uma consulta bem-sucedida vigente.
+  const resolvedCepRef = useRef<string | null>(null);
+  // CEP (dígitos) mais recente digitado, lido de forma síncrona dentro do
+  // callback assíncrono da consulta para saber se o usuário já mudou o CEP
+  // de novo enquanto a resposta ainda não tinha chegado.
+  const latestCepDigitsRef = useRef("");
 
   function update<K extends keyof FormState>(key: K, value: FormState[K]) {
     setForm((f) => ({ ...f, [key]: value }));
   }
+
+  const runCepLookup = useCallback((digits: string) => {
+    setCepStatus("loading");
+    fetch(`/api/cep/${digits}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (latestCepDigitsRef.current !== digits) return; // CEP já mudou de novo
+        if (data.found) {
+          resolvedCepRef.current = digits;
+          setForm((f) => ({
+            ...f,
+            address: data.street || f.address,
+            neighborhood: data.neighborhood || f.neighborhood,
+            city: data.city,
+            state: data.state,
+          }));
+          setCepStatus("found");
+        } else if (data.reason === "not_found") {
+          setCepStatus("not_found");
+        } else {
+          setCepStatus("error");
+        }
+      })
+      .catch(() => {
+        if (latestCepDigitsRef.current === digits) setCepStatus("error");
+      });
+  }, []);
+
+  // Dispara a consulta automaticamente quando o CEP chega a 8 dígitos, e
+  // invalida imediatamente cidade/UF/endereço/bairro assim que o CEP muda
+  // em relação ao que gerou os valores atuais — nunca deixa esses campos
+  // parecerem válidos para um CEP diferente do que está no campo agora.
+  useEffect(() => {
+    const digits = normalizeCep(form.zip);
+    latestCepDigitsRef.current = digits;
+
+    if (digits !== resolvedCepRef.current) {
+      resolvedCepRef.current = null;
+      setCepStatus("idle");
+      setForm((f) =>
+        f.city || f.state || f.neighborhood
+          ? { ...f, city: "", state: "", neighborhood: "", address: "" }
+          : f
+      );
+    }
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- liga o indicador de carregamento antes de disparar a consulta assíncrona abaixo
+    if (digits.length === 8) runCepLookup(digits);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só deve reagir a mudanças no próprio CEP
+  }, [form.zip]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -144,17 +206,44 @@ export default function CheckoutPage() {
               Endereço de entrega
             </legend>
             <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
-              <Input
-                label="CEP"
-                required
-                value={form.zip}
-                onChange={(v) => update("zip", v)}
-              />
+              <div>
+                <Input
+                  label="CEP"
+                  required
+                  value={form.zip}
+                  onChange={(v) => update("zip", formatCep(v))}
+                  placeholder="00000-000"
+                  inputMode="numeric"
+                  autoComplete="postal-code"
+                  maxLength={9}
+                />
+                {cepStatus === "loading" && (
+                  <p className="mt-1 text-xs text-muted">Buscando endereço...</p>
+                )}
+                {cepStatus === "not_found" && (
+                  <p className="mt-1 text-xs text-accent">
+                    CEP não encontrado. Verifique o CEP informado.
+                  </p>
+                )}
+                {cepStatus === "error" && (
+                  <p className="mt-1 text-xs text-accent">
+                    Não foi possível consultar o CEP agora.{" "}
+                    <button
+                      type="button"
+                      onClick={() => runCepLookup(normalizeCep(form.zip))}
+                      className="underline underline-offset-2"
+                    >
+                      Tentar novamente.
+                    </button>
+                  </p>
+                )}
+              </div>
               <Input
                 label="Endereço"
                 required
                 value={form.address}
                 onChange={(v) => update("address", v)}
+                autoComplete="address-line1"
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-[1fr_2fr]">
@@ -168,6 +257,7 @@ export default function CheckoutPage() {
                 label="Complemento"
                 value={form.complement}
                 onChange={(v) => update("complement", v)}
+                autoComplete="address-line2"
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-3">
@@ -180,15 +270,21 @@ export default function CheckoutPage() {
               <Input
                 label="Cidade"
                 required
+                readOnly
                 value={form.city}
                 onChange={(v) => update("city", v)}
+                placeholder="Preenchida pelo CEP"
+                autoComplete="address-level2"
               />
               <Input
                 label="Estado"
                 required
+                readOnly
                 value={form.state}
                 onChange={(v) => update("state", v)}
                 placeholder="UF"
+                autoComplete="address-level1"
+                maxLength={2}
               />
             </div>
             <div>
@@ -272,6 +368,10 @@ function Input({
   type = "text",
   required,
   placeholder,
+  readOnly,
+  autoComplete,
+  inputMode,
+  maxLength,
 }: {
   label: string;
   value: string;
@@ -279,6 +379,10 @@ function Input({
   type?: string;
   required?: boolean;
   placeholder?: string;
+  readOnly?: boolean;
+  autoComplete?: string;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
+  maxLength?: number;
 }) {
   return (
     <div>
@@ -291,8 +395,16 @@ function Input({
         required={required}
         value={value}
         placeholder={placeholder}
+        readOnly={readOnly}
+        autoComplete={autoComplete}
+        inputMode={inputMode}
+        maxLength={maxLength}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-xl border border-border bg-background px-4 py-2.5 outline-none focus:border-accent"
+        className={`w-full rounded-xl border px-4 py-2.5 outline-none focus:border-accent ${
+          readOnly
+            ? "border-border bg-card text-muted"
+            : "border-border bg-background"
+        }`}
       />
     </div>
   );
