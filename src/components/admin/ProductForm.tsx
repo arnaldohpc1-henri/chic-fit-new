@@ -25,6 +25,10 @@ type FormState = {
   images: string[];
   colors: ColorVariant[];
   variants: FormVariant[];
+  weightText: string;
+  heightText: string;
+  widthText: string;
+  lengthText: string;
 };
 
 const DEFAULT_HEX = "#000000";
@@ -40,6 +44,10 @@ const EMPTY_FORM: FormState = {
   images: [],
   colors: [{ name: "", hex: DEFAULT_HEX, images: [] }],
   variants: [],
+  weightText: "",
+  heightText: "",
+  widthText: "",
+  lengthText: "",
 };
 
 function productToForm(p: Product): FormState {
@@ -64,6 +72,10 @@ function productToForm(p: Product): FormState {
       size: v.size,
       stock: v.stock,
     })),
+    weightText: p.weight == null ? "" : String(p.weight),
+    heightText: p.height == null ? "" : String(p.height),
+    widthText: p.width == null ? "" : String(p.width),
+    lengthText: p.length == null ? "" : String(p.length),
   };
 }
 
@@ -179,6 +191,27 @@ export function ProductForm(props: Props) {
       return;
     }
 
+    const shippingFields: [string, string][] = [
+      ["Peso", form.weightText],
+      ["Altura", form.heightText],
+      ["Largura", form.widthText],
+      ["Comprimento", form.lengthText],
+    ];
+    const shippingValues: Record<string, number | null> = {};
+    for (const [label, text] of shippingFields) {
+      if (text.trim() === "") {
+        shippingValues[label] = null;
+        continue;
+      }
+      const n = Number(text);
+      if (!Number.isFinite(n) || n <= 0) {
+        setError(`${label} inválido — informe um número maior que zero, ou deixe em branco.`);
+        setSaving(false);
+        return;
+      }
+      shippingValues[label] = n;
+    }
+
     const namedColors = form.colors
       .map((c) => ({ ...c, name: c.name.trim() }))
       .filter((c) => c.name.length > 0);
@@ -221,6 +254,10 @@ export function ProductForm(props: Props) {
       images: form.images,
       colors: validColors,
       variants: form.variants,
+      weight: shippingValues["Peso"],
+      height: shippingValues["Altura"],
+      width: shippingValues["Largura"],
+      length: shippingValues["Comprimento"],
     };
 
     try {
@@ -326,6 +363,68 @@ export function ProductForm(props: Props) {
             onChange={(e) => setForm((f) => ({ ...f, sizesText: e.target.value }))}
             className="w-full rounded-xl border border-border bg-background px-4 py-2.5 outline-none focus:border-accent"
           />
+        </div>
+      </div>
+
+      <div>
+        <p className="text-xs uppercase tracking-wide text-muted">Dados para envio</p>
+        <p className="mt-1 text-xs text-muted">
+          Usados internamente para calcular o frete futuramente. Deixe em branco se ainda
+          não souber — a peça continua funcionando normalmente sem esses dados.
+        </p>
+        <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div>
+            <label className="mb-1 block text-xs uppercase tracking-wide text-muted">
+              Peso (kg)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.weightText}
+              onChange={(e) => setForm((f) => ({ ...f, weightText: e.target.value }))}
+              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 outline-none focus:border-accent"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs uppercase tracking-wide text-muted">
+              Altura (cm)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.heightText}
+              onChange={(e) => setForm((f) => ({ ...f, heightText: e.target.value }))}
+              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 outline-none focus:border-accent"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs uppercase tracking-wide text-muted">
+              Largura (cm)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.widthText}
+              onChange={(e) => setForm((f) => ({ ...f, widthText: e.target.value }))}
+              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 outline-none focus:border-accent"
+            />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs uppercase tracking-wide text-muted">
+              Comprimento (cm)
+            </label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.lengthText}
+              onChange={(e) => setForm((f) => ({ ...f, lengthText: e.target.value }))}
+              className="w-full rounded-xl border border-border bg-background px-4 py-2.5 outline-none focus:border-accent"
+            />
+          </div>
         </div>
       </div>
 

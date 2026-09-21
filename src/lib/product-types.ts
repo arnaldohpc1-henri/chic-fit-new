@@ -35,4 +35,15 @@ export type Product = {
   isDraft?: boolean;
   /** ISO 8601, gravado no momento da criação (ver POST /api/admin/products) — ausente em peças cadastradas antes deste campo existir, nunca preenchido retroativamente */
   createdAt?: string;
+  /**
+   * Dados físicos para cotação de frete (Prioridade 12) — pertencem ao
+   * produto, não a cada variação de cor×tamanho. Opcionais e nunca
+   * preenchidos automaticamente: peças cadastradas antes desses campos
+   * existirem ficam com `null`/ausentes até a lojista preencher os valores
+   * reais pelo painel. Unidades: kg para peso, cm para as dimensões.
+   */
+  weight?: number | null;
+  height?: number | null;
+  width?: number | null;
+  length?: number | null;
 };

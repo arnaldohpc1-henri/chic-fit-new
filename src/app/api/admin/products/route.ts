@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProducts, mutateProducts, normalizeColor, normalizeVariant } from "@/lib/products";
+import { getProducts, mutateProducts, normalizeColor, normalizeVariant, normalizePositiveNumber } from "@/lib/products";
 import type { Product } from "@/lib/product-types";
 import { blobErrorMessage } from "@/lib/blob-error";
 
@@ -64,6 +64,10 @@ export async function POST(req: NextRequest) {
         colors: body.colors.map(normalizeColor),
         variants: Array.isArray(body.variants) ? body.variants.map(normalizeVariant) : [],
         createdAt: new Date().toISOString(),
+        weight: normalizePositiveNumber(body.weight),
+        height: normalizePositiveNumber(body.height),
+        width: normalizePositiveNumber(body.width),
+        length: normalizePositiveNumber(body.length),
       };
 
       return [...current, created];

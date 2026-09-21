@@ -17,6 +17,18 @@ export function normalizeHex(value: string): string {
 }
 
 /**
+ * Usado tanto ao ler produtos do Blob (proteção contra dado corrompido)
+ * quanto ao gravar pelo painel (POST/PUT) — única fonte de verdade para o
+ * que conta como peso/dimensão válido: número finito e maior que zero.
+ * Qualquer outra coisa (negativo, zero, NaN, Infinity, string, ausente)
+ * vira `null` em vez de travar o cadastro ou salvar lixo.
+ */
+export function normalizePositiveNumber(value: unknown): number | null {
+  const n = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/**
  * Deixa produtos vindos do Blob (ou do catálogo inicial) sempre no formato
  * atual, mesmo que tenham sido salvos antes da cor ganhar `hex` e a peça
  * ganhar imagens gerais — isso é o que mantém peças antigas funcionando sem
@@ -85,7 +97,17 @@ export function normalizeProduct(product: Product): Product {
       ? product.variants.map(normalizeVariant)
       : generateVariants(colors, sizes, DEFAULT_LEGACY_STOCK);
 
-  return { ...product, images, colors, sizes, variants };
+  return {
+    ...product,
+    images,
+    colors,
+    sizes,
+    variants,
+    weight: normalizePositiveNumber(product.weight),
+    height: normalizePositiveNumber(product.height),
+    width: normalizePositiveNumber(product.width),
+    length: normalizePositiveNumber(product.length),
+  };
 }
 
 // Catálogo inicial — usado apenas até a primeira gravação feita pelo painel

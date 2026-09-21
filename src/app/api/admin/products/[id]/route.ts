@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getProducts, mutateProducts, normalizeColor, normalizeVariant } from "@/lib/products";
+import { getProducts, mutateProducts, normalizeColor, normalizeVariant, normalizePositiveNumber } from "@/lib/products";
 import { blobErrorMessage } from "@/lib/blob-error";
 import type { Product } from "@/lib/product-types";
 
@@ -59,6 +59,10 @@ export async function PUT(
         images: Array.isArray(body.images) ? body.images : [],
         colors: body.colors.map(normalizeColor),
         variants: Array.isArray(body.variants) ? body.variants.map(normalizeVariant) : [],
+        weight: normalizePositiveNumber(body.weight),
+        height: normalizePositiveNumber(body.height),
+        width: normalizePositiveNumber(body.width),
+        length: normalizePositiveNumber(body.length),
       };
 
       const next = [...current];
